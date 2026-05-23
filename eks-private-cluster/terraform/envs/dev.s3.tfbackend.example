@@ -1,0 +1,6 @@
+# Copy this file to dev.s3.tfbackend and fill in your values
+# Usage: terraform init -backend-config=envs/dev.s3.tfbackend
+
+bucket = "YOUR_ACCOUNT_ID-tfstate-dev"
+key    = "state/dev"
+region = "ap-southeast-7"

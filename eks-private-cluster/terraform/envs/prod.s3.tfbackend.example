@@ -1,0 +1,6 @@
+# Copy this file to prod.s3.tfbackend and fill in your values
+# Usage: terraform init -backend-config=envs/prod.s3.tfbackend
+
+bucket = "YOUR_ACCOUNT_ID-tfstate-prod"
+key    = "state/prod"
+region = "ap-southeast-7"

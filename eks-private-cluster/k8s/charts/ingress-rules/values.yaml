@@ -1,0 +1,19 @@
+domains:
+  app: "[replace_with_your_domain]"       # override in values-<env>.yaml
+  argocd: "[replace_with_your_domain]" # override in values-<env>.yaml
+  grafana: "[replace_with_your_domain]" # override in values-<env>.yaml
+
+helloworld:
+  serviceName: "helloworld-svc"
+  namespace: "dev-app"   # override in values-<env>.yaml
+  port: 8000
+
+argocd:
+  serviceName: "argocd-server"
+  namespace: "argocd"
+  port: 8080
+
+grafana:
+  serviceName: "kube-prometheus-stack-grafana"
+  namespace: "monitoring"
+  port: 80

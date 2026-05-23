@@ -1,0 +1,8 @@
+# Dev environment overrides
+replicaCount: 2
+
+image:
+  repository: "[replace_with_your_ecr_repository_url]/helloworld"
+  tag: "latest"
+
+env: "dev"

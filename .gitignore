@@ -1,0 +1,88 @@
+# ==============================
+# OS / Editor
+# ==============================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# ==============================
+# Logs / Temp
+# ==============================
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# ==============================
+# Environment / Secrets
+# ==============================
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_rsa.pub
+*.kubeconfig
+kubeconfig
+
+# ==============================
+# Terraform
+# ==============================
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Common sensitive var files (keep examples only)
+*.auto.tfvars
+*.auto.tfvars.json
+secrets.tfvars
+secret.tfvars
+
+# ==============================
+# Terragrunt
+# ==============================
+**/.terragrunt-cache/*
+**/.terragrunt-download/*
+
+# ==============================
+# Kubernetes / Helm generated artifacts
+# ==============================
+*.release.yaml
+*.rendered.yaml
+helmfile.lock
+
+# Common local secret manifests
+*secret*.yaml
+*secret*.yml
+
+# ==============================
+# Test / Coverage
+# ==============================
+coverage/
+.coverage
+
+# ==============================
+# Python (if used in subfolders)
+# ==============================
+__pycache__/
+*.py[cod]
+.venv/
+venv/

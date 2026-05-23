@@ -1,0 +1,2 @@
+# Deployment removed — NGINX Ingress Controller is installed separately via:
+# helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace

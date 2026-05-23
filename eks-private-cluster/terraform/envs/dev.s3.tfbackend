@@ -1,0 +1,3 @@
+bucket = "[your_precreate_s3_bucket]"
+key    = "state/dev"
+region = "[s3_region]"

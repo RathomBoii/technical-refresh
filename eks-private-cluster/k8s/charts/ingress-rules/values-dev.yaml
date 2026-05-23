@@ -1,0 +1,8 @@
+# Dev environment overrides
+domains:
+  app: "[replace_with_your_domain]"
+  argocd: "[replace_with_your_domain]"
+  grafana: "[replace_with_your_domain]"
+
+helloworld:
+  namespace: "dev-app"

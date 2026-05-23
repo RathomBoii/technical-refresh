@@ -1,0 +1,9 @@
+# Files excluded when packaging for Terraform Cloud / registry
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfbackend
+.git/
+.DS_Store
+**/.DS_Store
+*.log

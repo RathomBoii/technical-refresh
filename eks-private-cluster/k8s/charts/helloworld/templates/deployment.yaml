@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: helloworld
+    env: {{ .Values.env }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: helloworld
+  template:
+    metadata:
+      labels:
+        app: helloworld
+        env: {{ .Values.env }}
+    spec:
+      containers:
+        - name: helloworld
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env | quote }}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }} # guaranteed minimum CPU for the container
+              memory: {{ .Values.resources.requests.memory }} # guaranteed minimum memory for the container
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }} # hard maximum — OOMKilled if exceeded
+              memory: {{ .Values.resources.limits.memory }} # hard maximum — OOMKilled if exceeded
+          livenessProbe:
+            httpGet:
+              path: /health # K8S restarts Pod if this fails
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health # K8S removes Pod from Service if this fails
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

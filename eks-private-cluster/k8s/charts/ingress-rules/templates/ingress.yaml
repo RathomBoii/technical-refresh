@@ -1,0 +1,83 @@
+# ── Ingress for Hello World (namespace: default) ─────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: helloworld-ingress
+  namespace: {{ .Values.helloworld.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: / # <=  rewrites the URL path before forwarding the request to the backend service. Browser → app.wolffialampang.com/api/hello, NGINX forwards → helloworld-svc:8000/           ✅ (path stripped, replaced with /)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod" # <= reference the ClusterIssuer named "letsencrypt-prod" for cert-manager to read the tls configuration in that ClusterIssuer and issue certs for this Ingress
+spec:
+  ingressClassName: nginx # <= specify the ingressClass to use (which ingress controller should manage this Ingress) which already registered via the helm iupgrade command when install nginx ingress controller.
+  tls:
+  - hosts:
+    - {{ .Values.domains.app }}
+    secretName: helloworld-tls
+  rules:
+  - host: {{ .Values.domains.app }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.helloworld.serviceName }}
+            port:
+              number: {{ .Values.helloworld.port }}
+---
+# ── Ingress for ArgoCD (namespace: argocd) ────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-ingress
+  namespace: {{ .Values.argocd.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - {{ .Values.domains.argocd }}
+    secretName: argocd-tls
+  rules:
+  - host: {{ .Values.domains.argocd }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.argocd.serviceName }}
+            port:
+              number: {{ .Values.argocd.port }}
+---
+# ── Ingress for Grafana (namespace: monitoring) ───────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: {{ .Values.grafana.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - {{ .Values.domains.grafana }}
+    secretName: grafana-tls
+  rules:
+  - host: {{ .Values.domains.grafana }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.grafana.serviceName }}
+            port:
+              number: {{ .Values.grafana.port }}
