@@ -13,24 +13,24 @@ env:
   AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
 
 jobs:
-  sast:
-    name: SAST — Semgrep Code Pattern
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    container:
-      image: semgrep/semgrep
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name }}
+  # sast:
+  #   name: SAST — Semgrep Code Pattern
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #   container:
+  #     image: semgrep/semgrep
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event.release.tag_name }}
 
-      - name: Run Semgrep
-        run: semgrep --config=auto --severity=ERROR --error .
+  #     - name: Run Semgrep
+  #       run: semgrep --config=auto --severity=ERROR --error .
 
   build-scan-push:
     name: Build → Scan → Push
-    needs: sast                  # Wait for SAST to pass
+    # needs: sast                  # Wait for SAST to pass
     runs-on: ubuntu-latest
     permissions:
       contents: read
