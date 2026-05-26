@@ -80,6 +80,19 @@ coverage/
 .coverage
 
 # ==============================
+# Node.js / TypeScript / NestJS
+# ==============================
+**/node_modules/
+**/dist/
+**/.nest/
+**/*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==============================
 # Python (if used in subfolders)
 # ==============================
 __pycache__/
