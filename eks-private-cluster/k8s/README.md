@@ -2,6 +2,8 @@
 
 Run these commands from the bastion host inside the `eks-private-cluster/` directory.
 
+Build and push the application image before applying any Kubernetes resources. Run the Docker commands from a machine that has Docker Buildx and access to Amazon ECR.
+
 ## Dev
 
 ### Each Helm Chart have `values.yaml` as the baseline and  `values-dev.yaml` as an overider for specific environment
@@ -9,7 +11,24 @@ Run these commands from the bastion host inside the `eks-private-cluster/` direc
 ***The duplicated key in `values-{env}.yaml` file will override the baseline values from `values.yaml`***
 
 ```bash
-# 1 — Install NGINX Ingress Controller (creates the NLB automatically)
+# 1 — Build Linux image and push to Amazon ECR
+export AWS_REGION="ap-southeast-7"
+export AWS_ACCOUNT_ID="<your-aws-account-id>"
+export ECR_REPOSITORY="helloworld"
+export IMAGE_TAG="<your-image-tag>"
+
+aws ecr get-login-password --region "${AWS_REGION}" | \
+  docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+docker buildx create --use --name eks-builder 2>/dev/null || docker buildx use eks-builder
+docker buildx build \
+  --platform linux/amd64 \
+  -f app/helloworld/Dockerfile \
+  -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}" \
+  app/helloworld \
+  --push
+
+# 2 — Install NGINX Ingress Controller (creates the NLB automatically)
 # Ref: https://kubernetes.github.io/ingress-nginx/deploy/#aws
 #
 # service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
@@ -22,14 +41,16 @@ Run these commands from the bastion host inside the `eks-private-cluster/` direc
 #   → Source: AWS in-tree cloud provider Service annotations
 #     https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.7/guide/service/annotations/
 # helm upgrade --install {release_name}} {repo_alias}/{chart_name}
+ # <= It's automatically register this nginx ingress controller as ingressClass = "nginx"
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update 
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \  # <= It's automatically register this nginx ingress controller as ingressClass = "nginx"
-  --namespace ingress-nginx --create-namespace \
-  --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
-  --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set 'controller.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-scheme=internet-facing' \
+  --set 'controller.service.annotations.service\.beta\.kubernetes\.io/aws-load-balancer-type=nlb'
 
-# 2 — cert-manager (issues TLS certs from Let's Encrypt automatically)
+# 3 — cert-manager (issues TLS certs from Let's Encrypt automatically)
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 helm upgrade --install cert-manager jetstack/cert-manager \
@@ -39,7 +60,7 @@ helm upgrade --install cert-manager jetstack/cert-manager \
 # Create ClusterIssuer (edit k8s/manifests/cluster-issuer.yaml to set your email first)
 kubectl apply -f k8s/manifests/cluster-issuer.yaml
 
-# 3 — ArgoCD
+# 4 — ArgoCD
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 helm upgrade --install argocd argo/argo-cd \
@@ -47,24 +68,28 @@ helm upgrade --install argocd argo/argo-cd \
   --version 6.7.0 \
   -f k8s/values/argocd/values-dev.yaml
 
-# 4 — Hello World (via ArgoCD — GitOps)
+# 5 — Hello World (via ArgoCD — GitOps)
 # ArgoCD will deploy helloworld from Git. No direct helm install needed.
 #  The chart is just for the example how you can pack your manifest files as a chart and share tp your internal team.
 # Edit repoURL in k8s/manifests/argocd-app-helloworld.yaml first.
+#  Create namespace before apply argo app for helloworld app
+kubectl create namespace dev-app
 kubectl apply -f k8s/manifests/app-helloworld/argocd-app-helloworld.yaml
 
-# 5 — Prometheus + Grafana (cluster monitoring)
+# 6 — Prometheus + Grafana (cluster monitoring)
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring --create-namespace \
   -f k8s/values/prometheus/values-dev.yaml
 
-# 6 — Ingress rules (points domains to services — includes Grafana)
+# 7 — Ingress rules (points domains to services — includes Grafana)
 helm upgrade --install ingress-rules ./k8s/charts/ingress-rules \
   --namespace ingress-nginx \
   -f k8s/charts/ingress-rules/values-dev.yaml
 ```
+
+Update `k8s/charts/helloworld/values-dev.yaml` so `image.repository` and `image.tag` match the ECR image you pushed with Buildx before applying the ArgoCD Application.
 
 > **DNS:** Add a CNAME record `grafana` → NLB hostname (same target as `app` and `argocd`).
 > Grafana dashboard will be available at `https://grafana.wolffialampang.com`
@@ -158,6 +183,12 @@ ArgoCD will then:
 2. Deploy it to the `dev-app` namespace
 3. Show sync status in the UI at `https://argocd.wolffialampang.com`
 4. Auto-sync on every `git push` (prune + selfHeal enabled)
+
+## ArgoCD default password
+```bash
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath="{.data.password}" | base64 -d && echo
+```
 
 ## Uninstall
 
