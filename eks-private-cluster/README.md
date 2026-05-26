@@ -70,7 +70,7 @@ eks-private-cluster/
 
 ```
 1. terraform apply          → provision VPC, EKS, Bastion, ECR
-2. docker build & push      → push app image to ECR
+2. docker buildx build      → build linux/amd64 image and push app image to ECR
 3. EC2 Instance Connect     → access bastion (no SSH key needed)
 4. helm install             → deploy apps to EKS (see k8s/README.md)
 ```
@@ -87,7 +87,7 @@ See [k8s/README.md](k8s/README.md) for the full helm deployment guide.
 - Terragrunt >= 0.50.0 (Option B only)
 - kubectl
 - Helm >= 3.0
-- Docker (to build and push the app image)
+- Docker with Buildx (to build and push the Linux app image)
 
 ---
 
@@ -164,7 +164,24 @@ terraform apply -var-file="envs/dev.tfvars" \
 # Step 3 — Connect to Bastion via EIC Endpoint (see "Connect via Bastion" below)
 #           then verify: kubectl get nodes
 
-# Step 4 — On Bastion: deploy Helm charts from the helm-deploy directory
+# Step 4 — Build and push the application image before applying Kubernetes resources
+export AWS_REGION="ap-southeast-7"
+export AWS_ACCOUNT_ID="<your-aws-account-id>"
+export ECR_REPOSITORY="helloworld"
+export IMAGE_TAG="<your-image-tag>"
+
+aws ecr get-login-password --region "${AWS_REGION}" | \
+  docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+docker buildx create --use --name eks-builder 2>/dev/null || docker buildx use eks-builder
+docker buildx build \
+  --platform linux/amd64 \
+  -f ./app/helloworld/Dockerfile \
+  -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}" \
+  ./app/helloworld \
+  --push
+
+# Step 5 — On Bastion: deploy Helm charts from the helm-deploy directory
 #           (self-contained — only needs eks:DescribeCluster + ecr:DescribeRepositories)
 cd helm-deploy
 terraform init -backend-config=envs/dev.s3.tfbackend
