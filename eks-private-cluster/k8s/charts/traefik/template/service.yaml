@@ -1,0 +1,39 @@
+# Use Service type LoadBalancer to expose Traefik to the internet
+# And route direct traffic to the Traefik pods and skipping NodePort and kube-proxy
+# AWS NLB -> Traefik Pods -> Backend Services
+# AWS NLB is used to expose Traefik to the internet, and route traffic directly to the Traefik pods, skipping NodePort and kube-proxy. This is more efficient and provides better performance for Traefik. The NLB is configured to be internet-facing, and to spread traffic across all AZs for high availability.
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: {{ .Values.namespace }}
+  annotations:
+
+    # Tell AWS LBC to handle this (not the in-tree provider)
+    # The value "external" is the signal. It tells the in-tree cloud provider 
+    # "don't handle this Service, step aside" — which leaves it for the AWS LBC to pick up.
+    #  in-tree mean the native source code of K8s , that mean anything outside of the K8s codebase is considered as out-of-tree, 
+    # and AWS LBC is an out-of-tree controller that runs separately from the K8s control plane, 
+    # and it watches for Services with this annotation to create and manage the corresponding AWS resources.
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+
+    # Route traffic directly to Pod IPs (most efficient)
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+
+    # internet-facing = public NLB / internal = private NLB
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+    # Spread traffic across all AZs
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+spec:
+  type: LoadBalancer
+  selector:
+    app: traefik
+  ports:
+    - name: web
+      port: 80
+      targetPort: 80
+    - name: websecure
+      port: 443
+      targetPort: 443

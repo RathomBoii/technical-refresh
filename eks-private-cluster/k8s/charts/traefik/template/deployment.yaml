@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: {{ .Values.serviceAccountName }} # ← Pod runs as this identity
+      containers:
+        - name: traefik
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          args:
+            - --entrypoints.web.address=:80
+            - --entrypoints.websecure.address=:443
+            - --providers.kubernetesingress=true
+            - --providers.kubernetescrd=true
+            - --certificatesresolvers.letsencrypt.acme.email=you@example.com
+            - --certificatesresolvers.letsencrypt.acme.storage=/data/acme.json
+            - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+            - --log.level=INFO
+            - --api.dashboard=true
+          ports:
+            - name: web
+              containerPort: 80
+            - name: websecure
+              containerPort: 443
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}

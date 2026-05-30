@@ -1,6 +1,10 @@
 # Dev environment overrides
 replicaCount: 2
 image:
-  repository: "[ecr-repo-url]/helloworld"
-  tag: "v.2.9"
+  repository: "dpage/pgadmin4"
+  tag: "6.15"
 env: "dev"
+
+
+
+

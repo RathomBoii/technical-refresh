@@ -4,7 +4,7 @@ metadata:
   name: {{ .Release.Name }}-svc
 spec:
   selector:
-    app: helloworld
+    app: pgadmin
   ports:
     - port: {{ .Values.service.port }} # port of this service
       targetPort: {{ .Values.service.port }} # port on the Pod to forward to

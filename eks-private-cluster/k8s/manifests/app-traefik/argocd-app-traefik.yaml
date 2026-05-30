@@ -1,0 +1,32 @@
+# k8s/manifests/argocd-app-traefik.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts   # ← Traefik's Helm repo
+    chart: traefik
+    targetRevision: "28.x.x"                    # ← pin the chart version
+    helm:
+      valueFiles:
+        - values-dev.yaml                        # ← if using your own values file
+      values: |                                  # ← or inline values
+        deployment:
+          replicas: 2
+        service:
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-type: "external"
+            service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+            service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

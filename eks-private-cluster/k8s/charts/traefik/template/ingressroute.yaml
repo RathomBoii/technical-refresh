@@ -1,0 +1,58 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: main-app-ingressroute
+  namespace: {{ .Values.namespace }}
+spec:
+  entryPoints:
+    - websecure # 443
+  routes:
+    - match: "Host(`{{ .Values.domains.helloworldApp }}`)"
+      kind: Rule
+      services:
+        - name: {{ .Values.helloworld.serviceName }}
+          port: 3000
+    - match: "Host(`{{ .Values.domains.userApp }}`)"
+      kind: Rule
+      services:
+        - name: {{ .Values.userApp.serviceName }}
+          port: 3000
+    - match: "Host(`{{ .Values.domains.prometheusApp }}`)"
+      kind: Rule
+      services:
+        - name: {{ .Values.prometheus.serviceName }}
+          port: 3000
+    # ArgoCD: must run with --insecure flag so it accepts plain HTTP from Traefik
+    # [Client] ──HTTPS──▶ Traefik (terminates TLS) ──HTTP──▶ ArgoCD pod:8080
+    - match: "Host(`{{ .Values.domains.argocd }}`)"
+      kind: Rule
+      services:
+        - name: {{ .Values.argocd.serviceName }}
+          port: 8080  # ArgoCD HTTP port (not 443), requires --insecure on argocd-server
+    # Grafana: must run with --insecure flag so it accepts plain HTTP from Traefik
+    # [Client] ──HTTPS──▶ Traefik (terminates TLS) ──HTTP──▶ Grafana pod:3000
+    - match: "Host(`{{ .Values.domains.grafana }}`)"
+      kind: Rule
+      services:
+        - name: {{ .Values.grafana.serviceName }}
+          port: 3000  # Grafana HTTP port (not 443), requires --insecure on grafana-server
+  # routes:
+  # - match: Host(`example.com`) && PathPrefix(`/api`)
+  #   kind: Rule
+  #   services:
+  #     - name: api-svc
+  #       port: 3000
+
+  # - match: Host(`example.com`) && PathPrefix(`/dashboard`)
+  #   kind: Rule
+  #   services:
+  #     - name: dashboard-svc
+  #       port: 4000
+
+  # - match: Host(`example.com`) && PathPrefix(`/`)
+  #   kind: Rule
+  #   services:
+  #     - name: frontend-svc
+  #       port: 3000
+  tls:
+    certResolver: letsencrypt

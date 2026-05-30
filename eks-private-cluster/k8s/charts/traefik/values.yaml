@@ -1,0 +1,48 @@
+domains:
+  helloworldApp: "hellowworld.example.com"
+  userApp: "user.example.com"
+  prometheusApp: "prometheus.example.com"
+  argocd: "argocd.example.com"
+
+argocd:
+  serviceName: argocd-server
+  namespace: argocd
+
+image:
+  repository: traefik
+  tag: "v3.0.0"
+
+deployment:
+  replicas: 2
+
+ingressRoute:
+  dashboard:
+    enabled: true
+    entryPoints: ["websecure"]
+
+ports:
+  web:
+    redirectTo:
+      port: websecure
+  websecure:
+    tls:
+      enabled: true
+
+certResolvers:
+  letsencrypt:
+    email: [email-address]
+    tlsChallenge: true
+
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

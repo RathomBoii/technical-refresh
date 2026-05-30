@@ -1,0 +1,27 @@
+# ── Prod environment overrides ────────────────────────────────────────────────
+kube-prometheus-stack:
+
+  grafana:
+    adminPassword: "changeme"  # set a strong password or inject from a Secret in prod
+
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  prometheus:
+    prometheusSpec:
+      retention: 30d  # longer retention in prod for incident investigation
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+
+  alertmanager:
+    enabled: true  # enable alerting in prod

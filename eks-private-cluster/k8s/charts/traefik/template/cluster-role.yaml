@@ -1,0 +1,33 @@
+#  The permission rule defined what actions allowed on what resources. 
+# In this case, Traefik needs to be able to read services, endpoints, secrets, 
+# ingresses and ingressclasses, and update the status of ingresses. The last rule allows Traefik to access its custom resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: traefik
+rules:
+  - apiGroups: [""] # <- which API group the resource belongs to. "" means the core API group
+    resources: [services, endpoints, secrets] # <- which resources the rule applies to
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io] # <- which API group the resource belongs to
+    resources: [ingresses, ingressclasses] # <- which resources the rule applies to
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses/status]
+    verbs: [update]
+  - apiGroups: [traefik.io]
+    resources: ["*"]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: traefik
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik # <- which ClusterRole to bind to, in this case we define it as "traefik" on line 7th
+subjects:
+  - kind: ServiceAccount
+    name: traefik-service-account # <- which ServiceAccount to bind, in this case we define it as "traefik-service-account"  on servie-account.yaml
+    namespace: traefik

@@ -1,0 +1,27 @@
+namespace: traefik
+
+serviceAccountName: traefik-service-account
+
+
+domains:
+  helloworldApp: [domain-url]
+  userApp: [domain-url]
+  argocd: [domain-url]
+  grafana: [domain-url]
+
+
+helloworld:
+  serviceName: helloworld-service 
+  namespace: helloworld
+
+argocd:
+  serviceName: argocd-service
+  namespace: argocd
+
+userApp:
+  serviceName: user-service
+  namespace: userapp
+
+grafana:
+  serviceName: grafana-service
+  namespace: monitoring

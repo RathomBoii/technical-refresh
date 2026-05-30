@@ -3,38 +3,28 @@ kind: Deployment
 metadata:
   name: {{ .Release.Name }}
   labels:
-    app: helloworld
+    app: pgadmin
     env: {{ .Values.env }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: helloworld
+      app: pgadmin
   template:
     metadata:
       labels:
-        app: helloworld
+        app: pgadmin
         env: {{ .Values.env }}
     spec:
-      serviceAccountName: {{ .Release.Name }}  # Links to IRSA role for Secrets Manager access
       containers:
-        - name: helloworld
+        - name: pgadmin
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8000
+            - containerPort: 3000
           env:
             - name: APP_ENV
               value: {{ .Values.env | quote }}
-          {{- if .Values.secrets.enabled }}
-          {{- range .Values.secrets.envVars }}
-            - name: {{ .name }} # application see env as this variable name
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .secretName }}
-                  key: {{ .key }}
-          {{- end }}
-          {{- end }}
           resources:
             requests:
               cpu: {{ .Values.resources.requests.cpu }} # guaranteed minimum CPU for the container
@@ -45,27 +35,12 @@ spec:
           livenessProbe:
             httpGet:
               path: /health # K8S restarts Pod if this fails
-              port: 8000
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet:
               path: /health # K8S removes Pod from Service if this fails
-              port: 8000
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
-          {{- if .Values.secrets.enabled }}
-          volumeMounts:
-            - name: secrets-store
-              mountPath: {{ .Values.secrets.mountPath }}
-              readOnly: true
-          {{- end }}
-      {{- if .Values.secrets.enabled }}
-      volumes:
-        - name: secrets-store
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ .Values.secrets.providerClass }}
-      {{- end }}

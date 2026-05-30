@@ -6,6 +6,21 @@ image:
   pullPolicy: IfNotPresent
 
 env: "dev"
+namespace: "dev-app"
+
+serviceAccount:
+  roleArn: ""  # Set in values-dev/prod.yaml — IAM role ARN from terraform output
+
+secrets:
+  enabled: false          # Set true once IRSA role + SecretProviderClass exist
+  providerClass: "helloworld-secrets"
+  mountPath: "/mnt/secrets"
+  envVars: []             # List of {name, secretName, key} for env vars from K8s Secret
+  # Example:
+  # envVars:
+  #   - name: API_KEY
+  #     secretName: helloworld-secrets
+  #     key: API_KEY
 
 service:
   type: ClusterIP

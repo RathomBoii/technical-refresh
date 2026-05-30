@@ -1,0 +1,47 @@
+# ── Prometheus wrapper chart — default values ─────────────────────────────────
+# Values under the "kube-prometheus-stack:" key are passed directly to the
+# upstream chart (https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack).
+# Override per environment in values-dev.yaml / values-prod.yaml.
+
+kube-prometheus-stack:
+
+  # ── Grafana ────────────────────────────────────────────────────────────────
+  grafana:
+    adminPassword: "changeme"  # override in env values files
+
+    ingress:
+      enabled: false  # ingress managed externally by nginx-ingress-rules chart
+
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # ── Prometheus ─────────────────────────────────────────────────────────────
+  prometheus:
+    prometheusSpec:
+      retention: 7d  # how long to keep metrics data
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+  # ── Alertmanager ───────────────────────────────────────────────────────────
+  alertmanager:
+    enabled: false  # disable by default; enable when alerting is needed
+
+  # ── Prometheus Operator ────────────────────────────────────────────────────
+  prometheusOperator:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
