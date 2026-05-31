@@ -12,6 +12,7 @@ domains:
   prometheusApp: prometheus.wolffialampang.com
   argocd: argocd.wolffialampang.com
   grafana: grafana.wolffialampang.com
+  traefik: traefik.wolffialampang.com
 
 
 helloworld:

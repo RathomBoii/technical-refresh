@@ -41,6 +41,16 @@ spec:
         - name: {{ .Values.grafana.serviceName }}
           namespace: {{ .Values.grafana.namespace }}
           port: 3000  # Grafana HTTP port (not 443), requires --insecure on grafana-server
+    # Traefik Dashboard: protected by BasicAuth middleware.
+    # Routes to api@internal (Traefik's built-in API/dashboard service).
+    # Secret must be created manually: kubectl create secret generic traefik-dashboard-auth-secret -n traefik --from-literal=users='...'
+    - match: "Host(`{{ .Values.domains.traefik }}`)"
+      kind: Rule
+      middlewares:
+        - name: traefik-dashboard-auth
+      services:
+        - name: api@internal
+          kind: TraefikService
   # routes:
   # - match: Host(`example.com`) && PathPrefix(`/api`)
   #   kind: Rule

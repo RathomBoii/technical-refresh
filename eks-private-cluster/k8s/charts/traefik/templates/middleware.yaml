@@ -1,0 +1,14 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-auth
+  namespace: {{ .Values.namespace }}
+spec:
+  basicAuth:
+    # Secret must be created manually on the cluster (not stored in Git):
+    #   kubectl create secret generic traefik-dashboard-auth-secret \
+    #     -n traefik \
+    #     --from-literal=users='admin:<htpasswd-bcrypt-hash>'
+    #
+    # Generate hash with: htpasswd -nbB admin <your-password>
+    secret: traefik-dashboard-auth-secret
