@@ -15,10 +15,10 @@ spec:
         - values-prod.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: dev-app
+    namespace: prod-app
   syncPolicy:
     automated:
       prune: true      # delete resources removed from Git
       selfHeal: true   # revert manual changes made outside Git
     syncOptions:
-      - CreateNamespace=true  # auto-create dev-app namespace if not exists
+      - CreateNamespace=true  # auto-create prod-app namespace if not exists
