@@ -60,4 +60,6 @@ spec:
   #     - name: frontend-svc
   #       port: 3000
   tls:
-    certResolver: letsencrypt
+    # cert-manager issues the cert and stores it in this Secret.
+    # The Secret is created by a Certificate resource in k8s/manifests/cluster-issuer.yaml
+    secretName: traefik-tls

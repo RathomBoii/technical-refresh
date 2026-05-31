@@ -2,13 +2,16 @@ namespace: traefik
 
 serviceAccountName: traefik-service-account
 
+deployment:
+  replicas: 2
+
 
 domains:
-  helloworldApp: [domain-url]
-  userApp: [domain-url]
-  prometheusApp: [domain-url]
-  argocd: [domain-url]
-  grafana: [domain-url]
+  helloworldApp: helloworldapp.wolffialampang.com
+  userApp: userapp.wolffialampang.com
+  prometheusApp: prometheus.wolffialampang.com
+  argocd: argocd.wolffialampang.com
+  grafana: grafana.wolffialampang.com
 
 
 helloworld:
@@ -16,7 +19,7 @@ helloworld:
   namespace: helloworld
 
 argocd:
-  serviceName: argocd-service
+  serviceName: argocd-server   # default service name from ArgoCD install using official Helm chart
   namespace: argocd
 
 userApp:

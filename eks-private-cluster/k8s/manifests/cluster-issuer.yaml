@@ -16,4 +16,5 @@ spec:
     solvers:
     - http01: # Challenge solver using HTTP-01
         ingress:
-          ingressClassName: nginx # <= specify the IngressClass to use for solving HTTP-01 challenges
+          ingressClassName: traefik # Traefik handles /.well-known/acme-challenge/ on port 80
+          # ingressClassName: nginx # Traefik handles /.well-known/acme-challenge/ on port 80
