@@ -12,7 +12,7 @@ spec:
     path: eks-private-cluster/k8s/charts/helloworld
     helm:
       valueFiles:
-        - values-dev.yaml
+        - values-prod.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dev-app
