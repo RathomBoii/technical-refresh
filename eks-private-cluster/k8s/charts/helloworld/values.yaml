@@ -9,7 +9,7 @@ env: "dev"
 namespace: "dev-app"
 
 serviceAccount:
-  roleArn: ""  # Set in values-dev/prod.yaml — IAM role ARN from terraform output
+  roleArn: "arn:aws:iam::687069305167:role/prod-helloworld"  # Set in values-dev/prod.yaml — IAM role ARN from terraform output
 
 secrets:
   enabled: false          # Set true once IRSA role + SecretProviderClass exist
@@ -21,7 +21,6 @@ secrets:
   #   - name: API_KEY
   #     secretName: helloworld-secrets
   #     key: API_KEY
-
 service:
   type: ClusterIP
   port: 8000
