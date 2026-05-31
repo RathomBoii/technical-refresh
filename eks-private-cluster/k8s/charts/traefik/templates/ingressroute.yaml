@@ -26,13 +26,13 @@ spec:
           namespace: {{ .Values.prometheus.namespace }}
           port: 3000
     # ArgoCD: must run with --insecure flag so it accepts plain HTTP from Traefik
-    # [Client] ──HTTPS──▶ Traefik (terminates TLS) ──HTTP──▶ ArgoCD pod:8080
+    # [Client] ──HTTPS──▶ Traefik (terminates TLS) ──HTTP──▶ ArgoCD service:80 ──▶ pod:8080
     - match: "Host(`{{ .Values.domains.argocd }}`)"
       kind: Rule
       services:
         - name: {{ .Values.argocd.serviceName }}
           namespace: {{ .Values.argocd.namespace }}
-          port: 8080  # ArgoCD HTTP port (not 443), requires --insecure on argocd-server
+          port: 80  # ArgoCD Service port 80 maps to container port 8080 when --insecure is set
     # Grafana: must run with --insecure flag so it accepts plain HTTP from Traefik
     # [Client] ──HTTPS──▶ Traefik (terminates TLS) ──HTTP──▶ Grafana pod:3000
     - match: "Host(`{{ .Values.domains.grafana }}`)"
