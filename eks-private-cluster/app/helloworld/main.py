@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 
 app = FastAPI()
 
@@ -25,17 +25,18 @@ def secret_check():
     return {"api_key_loaded": API_KEY is not None}
 
 @app.get("/secret-value")
-def secret_value(request: Request):
-    """Returns the actual API key value — for testing only, not for production."""
-    # In a real app, you'd want more robust access control than just IP allowlisting.
-    secret_key = request.query_params.get("secret_key")
-    secret_value = os.environ.get(secret_key)
+def secret_value(request: Request, key: str = Query(..., description="Env var name to look up, e.g. API_KEY")):
+    """Returns the actual env var value — for testing only, not for production.
+    
+    Usage: /secret-value?key=API_KEY
+    """
+    value = os.environ.get(key)
     client_ip = request.client.host
 
-    if secret_key:
-        return {"client_ip": client_ip, "secret_key": secret_key, "secret_value": secret_value }
+    if value is not None:
+        return {"client_ip": client_ip, "key": key, "value": value}
     else:
-        return {"client_ip": client_ip, "error": f"secret key: {secret_key} not found in environment variables"}
+        return {"client_ip": client_ip, "error": f"'{key}' not found in environment variables"}
 
     
 
