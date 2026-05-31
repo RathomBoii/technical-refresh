@@ -10,7 +10,7 @@ spec:
     # # use this while testing — unlimited requests, no rate limits
     # server: https://acme-staging-v02.api.letsencrypt.org/directory
     server: https://acme-v02.api.letsencrypt.org/directory #  ACME server for TLS challenges
-    email: [email-address]  # replace with your email for expirt notifications
+    email: jessada@wolffialampang.com  # notifications for cert expiry
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
