@@ -14,6 +14,12 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "kubernetes_version" {
+  description = "Kubernetes version for the EKS cluster (e.g. 1.35)"
+  type        = string
+  default     = "1.35"
+}
+
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
@@ -67,9 +73,9 @@ variable "ecr_repo_name" {
 }
 
 variable "ecr_image_tag_mutability" {
-  description = "ECR image tag mutability (MUTABLE or IMMUTABLE)"
+  description = "ECR image tag mutability (MUTABLE or IMMUTABLE). Use IMMUTABLE in prod to prevent tag overwriting."
   type        = string
-  default     = "MUTABLE"
+  default     = "IMMUTABLE"
 }
 
 variable "helloworld_image_tag" {
@@ -90,7 +96,88 @@ variable "argocd_version" {
   default     = "6.7.0"
 }
 
+variable "bastion_instance_type" {
+  description = "EC2 instance type for the bastion host"
+  type        = string
+  default     = "t3.micro"
+}
+
 variable "tfstate_bucket" {
   description = "S3 bucket name used for Terraform state — grants bastion IAM role access to run terraform apply from inside the VPC"
   type        = string
+}
+
+# ── RDS ───────────────────────────────────────────────────────────────────────
+variable "rds_db_identifier" {
+  description = "Unique identifier for the RDS instance"
+  type        = string
+  default     = "postgres"
+}
+
+variable "rds_db_name" {
+  description = "Initial database name created inside the RDS instance"
+  type        = string
+  default     = "appdb"
+}
+
+variable "rds_db_username" {
+  description = "Master database username"
+  type        = string
+  default     = "pgadmin"
+}
+
+variable "rds_instance_class" {
+  description = "RDS instance class. db.t3.micro is the smallest for PostgreSQL"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "rds_multi_az" {
+  description = "Enable Multi-AZ for high availability. false in dev, true in prod"
+  type        = bool
+  default     = false
+}
+
+variable "rds_backup_retention_period" {
+  description = "Days to retain automated backups (0 disables backups)"
+  type        = number
+  default     = 7
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Skip final snapshot on destroy. Set false in prod"
+  type        = bool
+  default     = true
+}
+
+variable "rds_deletion_protection" {
+  description = "Prevent accidental deletion. Enable in prod"
+  type        = bool
+  default     = false
+}
+
+# ── IAM / App secrets ─────────────────────────────────────────────────────────
+variable "helloworld_namespace" {
+  description = "Kubernetes namespace where helloworld is deployed"
+  type        = string
+  default     = "dev-app"
+}
+
+variable "helloworld_api_key_value" {
+  description = "Initial value for helloworld API key secret in Secrets Manager. Pass via TF_VAR_helloworld_api_key_value env var — never commit to tfvars."
+  type        = string
+  sensitive   = true
+  default     = "changeme-replace-before-use"
+}
+
+variable "eso_namespace" {
+  description = "Kubernetes namespace where External Secrets Operator is deployed — must match ArgoCD destination namespace"
+  type        = string
+  default     = "external-secrets"
+}
+
+variable "eso_service_account_name" {
+  description = "ServiceAccount name used by ESO — must match secret-store chart values.serviceAccount.name"
+  type        = string
+  default     = "eks-secret-store-irsa"
 }
