@@ -70,7 +70,7 @@ secret.tfvars
 helmfile.lock
 
 # Common local secret manifests
-*secret*.yaml
+# *secret*.yaml
 *secret*.yml
 
 # ==============================

@@ -1,0 +1,14 @@
+# Default values for secret-store chart.
+# Override per environment using values-dev.yaml or values-prod.yaml.
+
+secretStore:
+  name: secret-store      # Name of the SecretStore resource
+  region: ap-southeast-7  # AWS region where Secrets Manager is hosted
+
+serviceAccount:
+  name: eks-secret-store-irsa  # ServiceAccount name referenced by the SecretStore
+  irsaRoleArn: ""              # IAM role ARN for IRSA — must be set per environment
+
+externalSecret:
+  name: helloworld-secrets      # Name of the k8s Secret to create — must match secretName in helloworld deployment values
+  key: ""                       # AWS Secrets Manager secret name to fetch — must be set per environment (e.g. prod/helloworld)

@@ -1,0 +1,14 @@
+# Dev environment overrides for secret-store chart.
+
+secretStore:
+  name: secret-store
+  region: ap-southeast-7
+
+serviceAccount:
+  name: eks-secret-store-irsa
+  irsaRoleArn: "arn:aws:iam::<DEV_ACCOUNT_ID>:role/<DEV_ROLE_NAME>"
+
+externalSecret:
+  name: helloworld-secrets   # must match secretName in helloworld values-dev.yaml
+  key: "dev/helloworld"      # AWS Secrets Manager secret name
+

@@ -1,15 +1,15 @@
-# Dev environment overrides
+# Prod environment overrides
 replicaCount: 1
 image:
   repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-helloworld"
-  tag: "v.2.11"
-env: "dev"
+  tag: "v.2.10"
+
+env: "prod"
+namespace: "prod-app"
 
 secrets:
   enabled: true
-  providerClass: "helloworld-secrets"
-  mountPath: "/mnt/secrets"
   envVars:
     - name: API_KEY          # env var name the application reads
-      secretName: helloworld-secrets  # K8s Secret synced by SecretProviderClass
-      key: API_KEY           # key inside the K8s Secret
+      secretName: helloworld-secrets  # K8s Secret
+      key: API_KEY           # key inside the K8s Secret JSON structure

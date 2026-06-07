@@ -13,7 +13,7 @@ spec:
       labels:
         app: traefik
     spec:
-      serviceAccountName: {{ .Values.serviceAccountName }} # ← Pod runs as this identity
+      serviceAccountName: {{ .Values.serviceAccountName }} # ← Pod runs as this identity (name: traefik-service-account)
       containers:
         - name: traefik
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -30,6 +30,7 @@ spec:
             # No ACME resolver needed here — cert-manager handles Let's Encrypt.
             - --log.level=INFO
             - --api.dashboard=true
+            - --api=true
           ports:
             - name: web
               containerPort: 80

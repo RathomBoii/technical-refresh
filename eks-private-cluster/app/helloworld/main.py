@@ -1,5 +1,4 @@
 import os
-
 from fastapi import FastAPI, Query, Request
 
 app = FastAPI()
@@ -29,6 +28,8 @@ def secret_value(request: Request, key: str = Query(..., description="Env var na
     """Returns the actual env var value — for testing only, not for production.
     
     Usage: /secret-value?key=API_KEY
+
+    !Important: this is for demonstration purposes only. Never expose secret values in production!
     """
     value = os.environ.get(key)
     client_ip = request.client.host

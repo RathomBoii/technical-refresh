@@ -1,0 +1,13 @@
+# Prod environment overrides for secret-store chart.
+
+secretStore:
+  name: secret-store
+  region: ap-southeast-7
+
+serviceAccount:
+  name: eks-secret-store-irsa
+  irsaRoleArn: "arn:aws:iam::<PROD_ACCOUNT_ID>:role/<PROD_ROLE_NAME>"
+
+externalSecret:
+  name: helloworld-secrets   # must match secretName in helloworld values-prod.yaml
+  key: "prod/helloworld"     # AWS Secrets Manager secret name

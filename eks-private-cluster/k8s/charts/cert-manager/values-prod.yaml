@@ -1,0 +1,7 @@
+dnsNames:
+  - argocd.wolffialampang.com
+  - grafana.wolffialampang.com
+  - helloworldapp.wolffialampang.com
+  - userapp.wolffialampang.com
+  - prometheus.wolffialampang.com
+  - traefik.wolffialampang.com

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: prometheus
+description: Prometheus wrapper chart — installs kube-prometheus-stack for cluster monitoring
+type: application
+version: 1.0.0
+appVersion: "v0.79.2"  # kube-prometheus-stack app version (Prometheus operator)
+
+# Pull the official kube-prometheus-stack chart as a dependency.
+# This installs Prometheus, Grafana, Alertmanager, and all CRDs/RBAC automatically.
+# You only override values in values.yaml — no need to write pod manifests yourself.
+dependencies:
+  - name: kube-prometheus-stack
+    version: "72.3.0"  # pin chart version for reproducibility
+    repository: "https://prometheus-community.github.io/helm-charts"

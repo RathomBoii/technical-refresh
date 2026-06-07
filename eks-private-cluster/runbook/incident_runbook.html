@@ -1,0 +1,541 @@
+
+<h2 class="sr-only">EKS Runbook Collection — 6 incident types with diagnosis steps, decision trees, rollback, and incident declaration</h2>
+
+<style>
+:root {
+  --rb-border: 0.5px solid var(--color-border-tertiary);
+  --rb-radius: var(--border-radius-lg);
+  --rb-mono: var(--font-mono);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-size: 15px; line-height: 1.6; color: var(--color-text-primary); }
+
+.rb-nav {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 1rem 0 1.25rem;
+  border-bottom: var(--rb-border);
+  margin-bottom: 1.5rem;
+}
+.rb-nav-btn {
+  font-size: 12px; padding: 5px 12px;
+  border: var(--rb-border); border-radius: 99px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  cursor: pointer; transition: all 0.15s;
+}
+.rb-nav-btn:hover { background: var(--color-background-tertiary); color: var(--color-text-primary); }
+.rb-nav-btn.active {
+  background: var(--color-text-primary);
+  color: var(--color-background-primary);
+  border-color: var(--color-text-primary);
+}
+
+.rb-page { display: none; }
+.rb-page.active { display: block; }
+
+.rb-header {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-background-secondary);
+  border: var(--rb-border); border-radius: var(--rb-radius);
+  margin-bottom: 1.5rem;
+}
+.rb-header-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.rb-header h2 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.rb-header p { font-size: 13px; color: var(--color-text-secondary); }
+
+.rb-section { margin-bottom: 1.5rem; }
+.rb-section-title {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--color-text-secondary);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.rb-section-title::after {
+  content: ''; flex: 1; height: 0.5px;
+  background: var(--color-border-tertiary);
+}
+
+.symptom-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;
+}
+.symptom-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border: var(--rb-border);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-primary);
+  font-size: 13px;
+}
+.symptom-pill i { font-size: 15px; color: var(--color-text-danger); }
+
+.cmd-block {
+  background: var(--color-background-secondary);
+  border: var(--rb-border); border-radius: var(--border-radius-md);
+  padding: 1rem 1.25rem; margin-bottom: 8px;
+}
+.cmd-label {
+  font-size: 11px; color: var(--color-text-secondary);
+  margin-bottom: 6px; font-weight: 500;
+}
+.cmd-block code {
+  font-family: var(--rb-mono); font-size: 12px;
+  color: var(--color-text-primary); display: block;
+  white-space: pre-wrap; line-height: 1.7;
+}
+
+.tree-wrap {
+  border: var(--rb-border); border-radius: var(--rb-radius);
+  overflow: hidden;
+}
+.tree-node {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 14px; border-bottom: var(--rb-border);
+  font-size: 13px;
+}
+.tree-node:last-child { border-bottom: none; }
+.tree-node.indent-1 { padding-left: 32px; background: var(--color-background-secondary); }
+.tree-node.indent-2 { padding-left: 50px; }
+.tree-node.result-ok { border-left: 3px solid var(--color-border-success); }
+.tree-node.result-fail { border-left: 3px solid var(--color-border-danger); }
+.tree-badge {
+  font-size: 10px; font-weight: 500; padding: 2px 8px;
+  border-radius: 99px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+}
+.badge-q { background: var(--color-background-info); color: var(--color-text-info); }
+.badge-y { background: var(--color-background-success); color: var(--color-text-success); }
+.badge-n { background: var(--color-background-danger); color: var(--color-text-danger); }
+.badge-fix { background: var(--color-background-warning); color: var(--color-text-warning); }
+
+.rollback-steps { counter-reset: rb-step; }
+.rb-step {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 10px 0; border-bottom: var(--rb-border); font-size: 13px;
+}
+.rb-step:last-child { border-bottom: none; }
+.rb-step-num {
+  counter-increment: rb-step;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--color-background-secondary);
+  border: var(--rb-border); display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 500;
+  flex-shrink: 0; color: var(--color-text-secondary);
+}
+.rb-step code {
+  font-family: var(--rb-mono); font-size: 11.5px;
+  background: var(--color-background-secondary);
+  padding: 1px 6px; border-radius: 4px;
+  border: var(--rb-border);
+}
+
+.incident-card {
+  border: var(--rb-border); border-radius: var(--rb-radius);
+  overflow: hidden;
+}
+.incident-row {
+  display: flex; gap: 0; border-bottom: var(--rb-border);
+  font-size: 13px;
+}
+.incident-row:last-child { border-bottom: none; }
+.incident-label {
+  width: 130px; flex-shrink: 0; padding: 10px 14px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary); font-size: 12px; font-weight: 500;
+  border-right: var(--rb-border);
+}
+.incident-val { padding: 10px 14px; flex: 1; }
+.sev-p1 { color: var(--color-text-danger); font-weight: 500; }
+.sev-p2 { color: var(--color-text-warning); font-weight: 500; }
+</style>
+
+<div class="rb-nav" id="nav"></div>
+<div id="pages"></div>
+
+<script>
+const RUNBOOKS = [
+  {
+    id: "r1",
+    title: "NLB healthy แต่ app 502/504",
+    icon: "ti-cloud-off",
+    iconBg: "background:var(--color-background-danger)",
+    desc: "NLB target group healthy แต่ client ได้รับ HTTP 502 หรือ 504",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "Browser แสดง 502/504" },
+      { icon: "ti-alert-triangle", text: "NLB target = healthy" },
+      { icon: "ti-alert-triangle", text: "Curl ผ่าน LB ไม่ผ่าน" },
+      { icon: "ti-alert-triangle", text: "Latency สูงผิดปกติ" },
+    ],
+    commands: [
+      { label: "1. ดู ingress-nginx logs", code: "kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50" },
+      { label: "2. ตรวจ endpoints มีไหม", code: "kubectl get endpoints <service-name> -n <namespace>" },
+      { label: "3. ตรวจ pod status", code: "kubectl get pods -n <namespace>\nkubectl describe pod <pod-name> -n <namespace>" },
+      { label: "4. curl ตรง pod ข้าม ingress", code: "kubectl exec -it <any-pod> -- curl http://<svc>.<ns>.svc.cluster.local:<port>/healthz" },
+      { label: "5. ตรวจ ingress resource", code: "kubectl describe ingress <name> -n <namespace>" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "Endpoints มี IP ไหม?" },
+      { indent: 1, badge: "n", text: "Label selector ไม่ match → แก้ spec.selector ใน Service ให้ตรงกับ pod labels", cls: "result-fail" },
+      { indent: 1, badge: "y", text: "Endpoints มี → ตรวจต่อ" },
+      { indent: 0, badge: "q", text: "Pod status เป็น Running ไหม?" },
+      { indent: 1, badge: "n", text: "CrashLoopBackOff / Error → kubectl logs ดู app error แล้วแก้ image/config", cls: "result-fail" },
+      { indent: 1, badge: "y", text: "Pod running → ตรวจต่อ" },
+      { indent: 0, badge: "q", text: "Curl ตรง pod ผ่านไหม?" },
+      { indent: 1, badge: "n", text: "App ไม่ตอบ → health check fail หรือ port ผิด → แก้ containerPort / readinessProbe", cls: "result-fail" },
+      { indent: 1, badge: "y", text: "Pod ตอบ แต่ผ่าน ingress ไม่ได้ → timeout annotation ขาด", cls: "result-ok" },
+      { indent: 2, badge: "fix", text: 'เพิ่ม annotation: nginx.ingress.kubernetes.io/proxy-read-timeout: "120"' },
+    ],
+    rollback: [
+      { text: "ระบุ revision ที่ใช้งานได้ครั้งล่าสุด", cmd: "kubectl rollout history deployment/<name> -n <namespace>" },
+      { text: "Rollback ไป revision นั้น", cmd: "kubectl rollout undo deployment/<name> -n <namespace>" },
+      { text: "หรือ rollback ไป revision เฉพาะ", cmd: "kubectl rollout undo deployment/<name> --to-revision=<N>" },
+      { text: "ตรวจสถานะหลัง rollback", cmd: "kubectl rollout status deployment/<name> -n <namespace>" },
+      { text: "ยืนยัน endpoints กลับมา", cmd: "kubectl get endpoints <service-name> -n <namespace>" },
+    ],
+    incident: {
+      severity: "P1", sev_cls: "sev-p1",
+      trigger: "502/504 เกิน 5 นาที หรือกระทบ user จริง",
+      notify: "On-call engineer + Team lead ทันที",
+      channel: "#incident-prod ใน Slack",
+      declare: 'argocd app get <app> → screenshot → โพสต์ใน #incident-prod พร้อม "INCIDENT DECLARED"',
+      resolve: "ยืนยัน error rate = 0 เป็นเวลา 10 นาที → โพสต์ resolved",
+    }
+  },
+  {
+    id: "r2",
+    title: "ingress-nginx controller crash",
+    icon: "ti-server-off",
+    iconBg: "background:var(--color-background-danger)",
+    desc: "ingress-nginx controller pod อยู่ในสถานะ CrashLoopBackOff หรือ Error",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "Pod CrashLoopBackOff" },
+      { icon: "ti-alert-triangle", text: "ทุก ingress ไม่ทำงาน" },
+      { icon: "ti-alert-triangle", text: "kubectl get pods แดง" },
+      { icon: "ti-alert-triangle", text: "NLB ชี้ไปหา pod ที่ crash" },
+    ],
+    commands: [
+      { label: "1. ดู pod status", code: "kubectl get pods -n ingress-nginx\nkubectl describe pod <controller-pod> -n ingress-nginx" },
+      { label: "2. ดู logs ก่อน crash", code: "kubectl logs -n ingress-nginx <controller-pod> --previous" },
+      { label: "3. ตรวจ resource usage", code: "kubectl top pod -n ingress-nginx" },
+      { label: "4. ตรวจ configmap", code: "kubectl describe configmap ingress-nginx-controller -n ingress-nginx" },
+      { label: "5. Force restart", code: "kubectl rollout restart deployment/ingress-nginx-controller -n ingress-nginx\nkubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "Last State บอก OOMKilled ไหม?" },
+      { indent: 1, badge: "y", text: "Memory limit ต่ำเกินไป → เพิ่ม resources.limits.memory ใน helm values", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ใช่ OOM → ดู logs ต่อ" },
+      { indent: 0, badge: "q", text: "Logs มี 'invalid nginx config' ไหม?" },
+      { indent: 1, badge: "y", text: "ConfigMap syntax ผิด → แก้ ConfigMap แล้ว rollout restart", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "Config ปกติ → ดูต่อ" },
+      { indent: 0, badge: "q", text: "Logs มี 'secret not found' ไหม?" },
+      { indent: 1, badge: "y", text: "TLS secret หายหรือ namespace ผิด → ตรวจ cert-manager / sync secret ใหม่", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่มี secret error → ดู app crash ใน logs บรรทัดสุดท้าย แล้ว Google error message นั้น", cls: "result-ok" },
+    ],
+    rollback: [
+      { text: "ดู helm release history", cmd: "helm history ingress-nginx -n ingress-nginx" },
+      { text: "Rollback helm release", cmd: "helm rollback ingress-nginx <REVISION> -n ingress-nginx" },
+      { text: "ถ้าไม่ใช้ helm → rollback deployment", cmd: "kubectl rollout undo deployment/ingress-nginx-controller -n ingress-nginx" },
+      { text: "ตรวจ pod กลับมา running", cmd: "kubectl get pods -n ingress-nginx -w" },
+      { text: "ทดสอบ ingress ผ่านจริง", cmd: "curl -I https://<your-domain>/healthz" },
+    ],
+    incident: {
+      severity: "P1", sev_cls: "sev-p1",
+      trigger: "Controller crash และ ingress ทั้งหมดใช้งานไม่ได้",
+      notify: "On-call + Platform team ทันที",
+      channel: "#incident-prod",
+      declare: "kubectl get pods -n ingress-nginx → screenshot → โพสต์ใน channel พร้อม timestamp",
+      resolve: "Controller running + ทดสอบ HTTPS endpoint ผ่านครบทุก service",
+    }
+  },
+  {
+    id: "r3",
+    title: "Certificate pending/expired",
+    icon: "ti-certificate-off",
+    iconBg: "background:var(--color-background-warning)",
+    desc: "HTTPS ใช้ไม่ได้ หรือ certificate แสดง False / expired ใน kubectl",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "Browser แจ้ง SSL error" },
+      { icon: "ti-alert-triangle", text: "kubectl get cert → False" },
+      { icon: "ti-alert-triangle", text: "READY = False นานผิดปกติ" },
+      { icon: "ti-alert-triangle", text: "cert-manager logs มี error" },
+    ],
+    commands: [
+      { label: "1. ดู certificate status", code: "kubectl get certificate -n <namespace>\nkubectl describe certificate <cert-name> -n <namespace>" },
+      { label: "2. ดู CertificateRequest", code: "kubectl get certificaterequest -n <namespace>\nkubectl describe certificaterequest <req-name> -n <namespace>" },
+      { label: "3. ดู cert-manager logs", code: "kubectl logs -n cert-manager deployment/cert-manager --tail=50" },
+      { label: "4. ตรวจ ClusterIssuer", code: "kubectl describe clusterissuer letsencrypt-prod" },
+      { label: "5. ตรวจ DNS challenge", code: "dig TXT _acme-challenge.<your-domain>" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "cert-manager logs มี 'rate limit' ไหม?" },
+      { indent: 1, badge: "y", text: "โดน Let's Encrypt rate limit → รอ 1 ชม. หรือใช้ letsencrypt-staging issuer ทดสอบก่อน", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ใช่ rate limit → ดูต่อ" },
+      { indent: 0, badge: "q", text: "Cluster เป็น private (ไม่มี public inbound)?" },
+      { indent: 1, badge: "y", text: "HTTP-01 ใช้ไม่ได้บน private cluster → ต้องเปลี่ยนเป็น DNS-01 challenge", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "Public cluster → HTTP-01 ควรใช้ได้" },
+      { indent: 0, badge: "q", text: "DNS record ถูกต้องไหม?" },
+      { indent: 1, badge: "n", text: "DNS ยังไม่ propagate หรือชี้ไปผิด → แก้ DNS record แล้วรอ TTL", cls: "result-fail" },
+      { indent: 1, badge: "y", text: "DNS ถูก → delete certificate แล้วให้ cert-manager สร้างใหม่", cls: "result-ok" },
+      { indent: 2, badge: "fix", text: "kubectl delete certificate <name> -n <ns> แล้ว ArgoCD sync ใหม่" },
+    ],
+    rollback: [
+      { text: "Backup cert secret ก่อน", cmd: "kubectl get secret <tls-secret> -n <namespace> -o yaml > tls-backup.yaml" },
+      { text: "ถ้า cert หมดอายุ → force renew", cmd: `kubectl annotate certificate <name> -n <ns> \\\n  cert-manager.io/issuer-kind=ClusterIssuer --overwrite` },
+      { text: "ถ้าต้องการใช้ cert เก่าชั่วคราว → restore secret", cmd: "kubectl apply -f tls-backup.yaml" },
+      { text: "ตรวจ cert ใหม่", cmd: "kubectl get certificate -n <namespace> -w" },
+      { text: "ทดสอบ HTTPS", cmd: "curl -vI https://<domain> 2>&1 | grep -E 'SSL|expire|issuer'" },
+    ],
+    incident: {
+      severity: "P2", sev_cls: "sev-p2",
+      trigger: "HTTPS ใช้งานไม่ได้บน production domain",
+      notify: "On-call engineer + แจ้ง business ว่า HTTPS down",
+      channel: "#incident-prod",
+      declare: "kubectl describe cert → screenshot error → โพสต์ใน channel",
+      resolve: "kubectl get cert แสดง READY=True และ curl ผ่าน HTTPS ได้",
+    }
+  },
+  {
+    id: "r4",
+    title: "ArgoCD sync แล้ว app ไม่ขึ้น",
+    icon: "ti-git-merge",
+    iconBg: "background:var(--color-background-info)",
+    desc: "ArgoCD แสดง Synced แต่ pod ไม่ running หรือ Healthy = False",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "ArgoCD: Synced แต่ Degraded" },
+      { icon: "ti-alert-triangle", text: "Pod ไม่ขึ้นหลัง sync" },
+      { icon: "ti-alert-triangle", text: "App Healthy = False" },
+      { icon: "ti-alert-triangle", text: "OutOfSync loop" },
+    ],
+    commands: [
+      { label: "1. ดู ArgoCD app status", code: "argocd app get <app-name>\nargocd app list" },
+      { label: "2. Dry run sync", code: "argocd app sync <app-name> --dry-run" },
+      { label: "3. ตรวจ resource จริงใน cluster", code: "kubectl get all -n <namespace>\nkubectl describe deployment <name> -n <namespace>" },
+      { label: "4. ดู application controller logs", code: "kubectl logs -n argocd deployment/argocd-application-controller --tail=50" },
+      { label: "5. Hard refresh + force sync", code: "argocd app get <app-name> --hard-refresh\nargocd app sync <app-name> --force" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "Pod status เป็นอะไร?" },
+      { indent: 1, badge: "fix", text: "ImagePullBackOff → ดู Runbook #6 (ECR pull fail)" },
+      { indent: 1, badge: "fix", text: "CrashLoopBackOff → kubectl logs ดู app error" },
+      { indent: 1, badge: "fix", text: "Pending → ดู Runbook #5 (node not ready)" },
+      { indent: 0, badge: "q", text: "ArgoCD แสดง OutOfSync loop ไหม?" },
+      { indent: 1, badge: "y", text: "Resource มี field ที่เปลี่ยนตลอด (เช่น annotation timestamp) → เพิ่ม ignoreDifferences ใน ArgoCD Application", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ loop → ดูต่อ" },
+      { indent: 0, badge: "q", text: "มี PreSync/PostSync Hook ค้างไหม?" },
+      { indent: 1, badge: "y", text: "kubectl get jobs -n <ns> → ถ้า job failed → ลบ job แล้ว sync ใหม่", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่มี hook ค้าง → ตรวจ secret / configmap ว่า mount ได้ครบไหม", cls: "result-ok" },
+    ],
+    rollback: [
+      { text: "ดู Git revision ที่ deploy ล่าสุด", cmd: "argocd app history <app-name>" },
+      { text: "Rollback ไป revision ก่อนหน้า", cmd: "argocd app rollback <app-name> <HISTORY-ID>" },
+      { text: "หรือ revert Git commit แล้ว push", cmd: "git revert HEAD && git push origin main" },
+      { text: "ตรวจ ArgoCD sync หลัง revert", cmd: "argocd app get <app-name> --hard-refresh" },
+      { text: "ยืนยัน pod running", cmd: "kubectl get pods -n <namespace> -w" },
+    ],
+    incident: {
+      severity: "P2", sev_cls: "sev-p2",
+      trigger: "Deploy ใหม่แล้ว app ไม่ขึ้นเกิน 10 นาที",
+      notify: "Developer ที่ merge PR + On-call",
+      channel: "#incident-prod",
+      declare: "argocd app get screenshot + git commit hash ที่ deploy → โพสต์ใน channel",
+      resolve: "Pod running + health check ผ่าน + ArgoCD Healthy",
+    }
+  },
+  {
+    id: "r5",
+    title: "Node not ready / pods pending",
+    icon: "ti-server-2",
+    iconBg: "background:var(--color-background-warning)",
+    desc: "kubectl get nodes แสดง NotReady หรือ pod ค้างที่ Pending ไม่ schedule",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "Node STATUS = NotReady" },
+      { icon: "ti-alert-triangle", text: "Pod ค้าง Pending นาน" },
+      { icon: "ti-alert-triangle", text: "Events: Insufficient cpu/memory" },
+      { icon: "ti-alert-triangle", text: "kubelet ไม่ตอบสนอง" },
+    ],
+    commands: [
+      { label: "1. ดู node status", code: "kubectl get nodes\nkubectl describe node <node-name>" },
+      { label: "2. ดู pod ที่ pending พร้อม reason", code: "kubectl get pods -A | grep -E 'Pending|NotReady'\nkubectl describe pod <pending-pod> -n <namespace>" },
+      { label: "3. ตรวจ resource", code: "kubectl top nodes\nkubectl describe node <node-name> | grep -A5 'Allocated resources'" },
+      { label: "4. ตรวจ kubelet (ผ่าน SSM)", code: "aws ssm start-session --target <instance-id>\nsudo systemctl status kubelet\nsudo journalctl -u kubelet --tail=50" },
+      { label: "5. Cordon และ drain node", code: "kubectl cordon <node-name>\nkubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "Events บอก Insufficient cpu/memory ไหม?" },
+      { indent: 1, badge: "y", text: "Node เต็ม → เพิ่ม node ใน node group หรือลด resource request ของ pod", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ใช่ resource → ดูต่อ" },
+      { indent: 0, badge: "q", text: "Events บอก Unschedulable / taint ไหม?" },
+      { indent: 1, badge: "y", text: "Pod ไม่มี toleration → เพิ่ม tolerations ใน pod spec ให้ match taint ของ node", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ใช่ taint → ดูต่อ" },
+      { indent: 0, badge: "q", text: "Node status = NotReady ไหม?" },
+      { indent: 1, badge: "y", text: "kubelet crash หรือ network → เข้าผ่าน SSM → restart kubelet หรือ replace node", cls: "result-fail" },
+      { indent: 0, badge: "q", text: "PVC ไม่ได้ bind ไหม?" },
+      { indent: 1, badge: "y", text: "kubectl get pvc -n <ns> → ถ้า Pending → ตรวจ StorageClass และ EBS CSI driver", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ปัญหาอื่น → kubectl describe pod ดู Events section อีกครั้ง", cls: "result-ok" },
+    ],
+    rollback: [
+      { text: "Uncordon node ถ้า drain ผิดพลาด", cmd: "kubectl uncordon <node-name>" },
+      { text: "Scale down node group แล้ว scale up ใหม่ (replace node)", cmd: "aws eks update-nodegroup-config --cluster-name <cluster> \\\n  --nodegroup-name <ng> --scaling-config minSize=0,maxSize=3,desiredSize=0" },
+      { text: "Scale up กลับ", cmd: "aws eks update-nodegroup-config --cluster-name <cluster> \\\n  --nodegroup-name <ng> --scaling-config minSize=1,maxSize=3,desiredSize=2" },
+      { text: "ตรวจ node กลับมา Ready", cmd: "kubectl get nodes -w" },
+      { text: "ตรวจ pod ที่ pending schedule ได้แล้ว", cmd: "kubectl get pods -A | grep Pending" },
+    ],
+    incident: {
+      severity: "P1", sev_cls: "sev-p1",
+      trigger: "Node NotReady และ workload ไม่สามารถ reschedule ได้",
+      notify: "On-call + Infra team",
+      channel: "#incident-prod",
+      declare: "kubectl get nodes screenshot + AWS Console node group status → โพสต์ใน channel",
+      resolve: "ทุก node Ready + pod ที่ค้าง Pending schedule ได้ครบ",
+    }
+  },
+  {
+    id: "r6",
+    title: "ECR pull fail / image tag mismatch",
+    icon: "ti-box-off",
+    iconBg: "background:var(--color-background-danger)",
+    desc: "Pod แสดง ImagePullBackOff หรือ ErrImagePull — ดึง image จาก ECR ไม่ได้",
+    symptoms: [
+      { icon: "ti-alert-triangle", text: "ImagePullBackOff" },
+      { icon: "ti-alert-triangle", text: "ErrImagePull" },
+      { icon: "ti-alert-triangle", text: "ECR tag ไม่มีอยู่จริง" },
+      { icon: "ti-alert-triangle", text: "403/404 จาก ECR" },
+    ],
+    commands: [
+      { label: "1. ดู error ชัด ๆ", code: "kubectl describe pod <pod-name> -n <namespace>\n# ดูที่ Events section" },
+      { label: "2. ตรวจ image tag ใน ECR", code: "aws ecr describe-images \\\n  --repository-name <repo-name> \\\n  --region ap-southeast-1 \\\n  --query 'imageDetails[*].imageTags'" },
+      { label: "3. ตรวจ IAM role ของ node", code: "aws iam get-role --role-name <node-role> \\\n  --query 'Role.AssumeRolePolicyDocument'" },
+      { label: "4. ทดสอบ pull ตรงจาก node (SSM)", code: "aws ssm start-session --target <instance-id>\naws ecr get-login-password --region ap-southeast-1 | \\\n  docker login --username AWS --password-stdin \\\n  <account-id>.dkr.ecr.ap-southeast-1.amazonaws.com\ndocker pull <account-id>.dkr.ecr.ap-southeast-1.amazonaws.com/<repo>:<tag>" },
+      { label: "5. แก้ image tag แล้ว apply", code: "kubectl set image deployment/<name> \\\n  <container>=<account>.dkr.ecr.<region>.amazonaws.com/<repo>:<correct-tag> \\\n  -n <namespace>" },
+    ],
+    tree: [
+      { indent: 0, badge: "q", text: "Error บอก 'not found' หรือ 'manifest unknown' ไหม?" },
+      { indent: 1, badge: "y", text: "Image tag ไม่มีใน ECR → ตรวจ CI/CD ว่า push สำเร็จไหม แล้วแก้ tag ใน deployment", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "Tag มีอยู่ → ดูต่อ" },
+      { indent: 0, badge: "q", text: "Error บอก '403 Forbidden' ไหม?" },
+      { indent: 1, badge: "y", text: "Node IAM role ขาด ecr:GetAuthorizationToken → เพิ่ม AmazonEC2ContainerRegistryReadOnly policy", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "ไม่ใช่ 403 → ดูต่อ" },
+      { indent: 0, badge: "q", text: "ECR repo อยู่ต่าง account ไหม?" },
+      { indent: 1, badge: "y", text: "ต้องเพิ่ม cross-account ECR policy + imagePullSecrets ใน pod", cls: "result-fail" },
+      { indent: 1, badge: "n", text: "Same account → ทดสอบ pull จาก node ผ่าน SSM เพื่อ isolate ปัญหา", cls: "result-ok" },
+    ],
+    rollback: [
+      { text: "Rollback deployment ไป image tag ที่ใช้งานได้", cmd: "kubectl rollout undo deployment/<name> -n <namespace>" },
+      { text: "หรือ set image กลับไป tag ที่รู้ว่าดี", cmd: "kubectl set image deployment/<name> \\\n  <container>=<ecr-url>/<repo>:<last-known-good-tag>" },
+      { text: "ตรวจ pod กลับมา running", cmd: "kubectl rollout status deployment/<name> -n <namespace>" },
+      { text: "ตรวจ CI/CD pipeline ว่า push ECR ครั้งล่าสุดสำเร็จไหม", cmd: "# เปิด GitHub Actions / CodePipeline → ดู latest run" },
+      { text: "ยืนยัน tag ที่ใช้อยู่จริง", cmd: "kubectl get deployment <name> -n <namespace> -o jsonpath='{.spec.template.spec.containers[*].image}'" },
+    ],
+    incident: {
+      severity: "P2", sev_cls: "sev-p2",
+      trigger: "Deploy ใหม่แล้ว ImagePullBackOff ทุก pod — app ใช้งานไม่ได้",
+      notify: "Developer ที่ push image + On-call",
+      channel: "#incident-prod",
+      declare: "kubectl describe pod error + ECR describe-images output → โพสต์ใน channel พร้อม image URI ที่ fail",
+      resolve: "Pod running + image pull สำเร็จ + verify tag ใน ECR ตรงกับ deployment",
+    }
+  }
+];
+
+const nav = document.getElementById('nav');
+const pages = document.getElementById('pages');
+
+RUNBOOKS.forEach((rb, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'rb-nav-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = `${i+1}. ${rb.title}`;
+  btn.onclick = () => {
+    document.querySelectorAll('.rb-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.rb-page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(rb.id).classList.add('active');
+  };
+  nav.appendChild(btn);
+
+  const page = document.createElement('div');
+  page.className = 'rb-page' + (i === 0 ? ' active' : '');
+  page.id = rb.id;
+
+  const treeHTML = rb.tree.map(n => `
+    <div class="tree-node indent-${n.indent} ${n.cls||''}">
+      <span class="tree-badge badge-${n.badge}">${n.badge === 'q' ? '?' : n.badge === 'y' ? 'YES' : n.badge === 'n' ? 'NO' : 'FIX'}</span>
+      <span>${n.text}</span>
+    </div>`).join('');
+
+  const rollbackHTML = rb.rollback.map((s, idx) => `
+    <div class="rb-step">
+      <div class="rb-step-num">${idx+1}</div>
+      <div><div style="margin-bottom:4px;color:var(--color-text-secondary);font-size:13px">${s.text}</div><code>${s.cmd}</code></div>
+    </div>`).join('');
+
+  page.innerHTML = `
+    <div class="rb-header">
+      <div class="rb-header-icon" style="${rb.iconBg}">
+        <i class="ti ${rb.icon}" style="font-size:20px;color:var(--color-text-danger)" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h2>${rb.title}</h2>
+        <p>${rb.desc}</p>
+      </div>
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-title">อาการ</div>
+      <div class="symptom-grid">${rb.symptoms.map(s => `
+        <div class="symptom-pill"><i class="ti ${s.icon}" aria-hidden="true"></i><span>${s.text}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-title">command ตรวจ</div>
+      ${rb.commands.map(c => `
+        <div class="cmd-block">
+          <div class="cmd-label">${c.label}</div>
+          <code>${c.code}</code>
+        </div>`).join('')}
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-title">decision tree</div>
+      <div class="tree-wrap">${treeHTML}</div>
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-title">วิธี rollback</div>
+      <div class="rollback-steps">${rollbackHTML}</div>
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-title">วิธี declare incident</div>
+      <div class="incident-card">
+        <div class="incident-row">
+          <div class="incident-label">Severity</div>
+          <div class="incident-val ${rb.incident.sev_cls}">${rb.incident.severity}</div>
+        </div>
+        <div class="incident-row">
+          <div class="incident-label">Trigger เมื่อ</div>
+          <div class="incident-val">${rb.incident.trigger}</div>
+        </div>
+        <div class="incident-row">
+          <div class="incident-label">แจ้งใคร</div>
+          <div class="incident-val">${rb.incident.notify}</div>
+        </div>
+        <div class="incident-row">
+          <div class="incident-label">Channel</div>
+          <div class="incident-val"><code style="font-family:var(--font-mono);font-size:12px">${rb.incident.channel}</code></div>
+        </div>
+        <div class="incident-row">
+          <div class="incident-label">วิธี declare</div>
+          <div class="incident-val">${rb.incident.declare}</div>
+        </div>
+        <div class="incident-row">
+          <div class="incident-label">วิธี resolve</div>
+          <div class="incident-val">${rb.incident.resolve}</div>
+        </div>
+      </div>
+    </div>`;
+
+  pages.appendChild(page);
+});
+</script>

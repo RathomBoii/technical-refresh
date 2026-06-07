@@ -16,7 +16,7 @@ spec:
         app: helloworld
         env: {{ .Values.env }}
     spec:
-      serviceAccountName: {{ .Release.Name }}  # Links to IRSA role for Secrets Manager access
+      serviceAccountName: {{ .Release.Name }}
       containers:
         - name: helloworld
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -28,7 +28,7 @@ spec:
               value: {{ .Values.env | quote }}
           {{- if .Values.secrets.enabled }}
           {{- range .Values.secrets.envVars }}
-            - name: {{ .name }} # application see env as this variable name
+            - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .secretName }}
@@ -37,35 +37,20 @@ spec:
           {{- end }}
           resources:
             requests:
-              cpu: {{ .Values.resources.requests.cpu }} # guaranteed minimum CPU for the container
-              memory: {{ .Values.resources.requests.memory }} # guaranteed minimum memory for the container
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
             limits:
-              cpu: {{ .Values.resources.limits.cpu }} # hard maximum — OOMKilled if exceeded
-              memory: {{ .Values.resources.limits.memory }} # hard maximum — OOMKilled if exceeded
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
           livenessProbe:
             httpGet:
-              path: /health # K8S restarts Pod if this fails
+              path: /health
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /health # K8S removes Pod from Service if this fails
+              path: /health
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
-          {{- if .Values.secrets.enabled }}
-          volumeMounts:
-            - name: secrets-store
-              mountPath: {{ .Values.secrets.mountPath }}
-              readOnly: true
-          {{- end }}
-      {{- if .Values.secrets.enabled }}
-      volumes:
-        - name: secrets-store
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ .Values.secrets.providerClass }}
-      {{- end }}

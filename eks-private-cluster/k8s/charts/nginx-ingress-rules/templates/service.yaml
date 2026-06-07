@@ -1,2 +1,0 @@
-# Service removed — NGINX Ingress Controller creates its own LoadBalancer Service (NLB)
-# automatically when installed via helm.

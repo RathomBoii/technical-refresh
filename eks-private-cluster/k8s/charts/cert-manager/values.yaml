@@ -1,0 +1,11 @@
+secretName: "traefik-tls"
+clusterIssuerName: "letsencrypt-prod"
+clusterIssuerKind: "ClusterIssuer"
+ingressClassName: "traefik"
+
+# List of domains the TLS certificate will cover.
+# Add a new entry here whenever you add a new subdomain to IngressRoute.
+dnsNames: []
+
+
+acmeEmail: "your-email@example.com" # Email for ACME account registration and expiry notifications

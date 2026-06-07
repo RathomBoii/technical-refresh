@@ -7,12 +7,12 @@ deployment:
 
 
 domains:
-  helloworldApp: helloworldapp.wolffialampang.com
-  userApp: userapp.wolffialampang.com
-  prometheusApp: prometheus.wolffialampang.com
-  argocd: argocd.wolffialampang.com
-  grafana: grafana.wolffialampang.com
-  traefik: traefik.wolffialampang.com
+  helloworldApp: helloworldapp.dev.wolffialampang.com
+  userApp: userapp.dev.wolffialampang.com
+  prometheusApp: prometheus.dev.wolffialampang.com
+  argocd: argocd.dev.wolffialampang.com
+  grafana: grafana.dev.wolffialampang.com
+  traefik: traefik.dev.wolffialampang.com
 
 
 helloworld:

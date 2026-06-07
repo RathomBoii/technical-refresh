@@ -12,6 +12,7 @@ spec:
       labels:
         app: fastapi-helloworld-app
     spec:
+      serviceAccountName: helloworld-sa  # links this pod to the IAM role via IRSA
       containers:
       - name: fastapi-helloworld-app
         image: fastapi_helloworld_app:v.1.0

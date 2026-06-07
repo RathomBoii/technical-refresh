@@ -5,16 +5,12 @@ image:
   tag: "latest"
   pullPolicy: IfNotPresent
 
-env: "prod"
-namespace: "prod-app"
 
 serviceAccount:
   roleArn: "arn:aws:iam::687069305167:role/prod-helloworld"  # Set in values-dev/prod.yaml — IAM role ARN from terraform output
 
 secrets:
   enabled: false          # Set true once IRSA role + SecretProviderClass exist
-  providerClass: "helloworld-secrets"
-  mountPath: "/mnt/secrets"
   envVars: []             # List of {name, secretName, key} for env vars from K8s Secret
   # Example:
   # envVars:

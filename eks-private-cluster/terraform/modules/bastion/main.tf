@@ -17,7 +17,7 @@ resource "aws_iam_role" "bastion" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Action    = "sts:AssumeRole"
+      Action    = "sts:AssumeRole" # every role assumer must have this permission in order to able to receive the temporary credentials from STS
       Principal = { Service = "ec2.amazonaws.com" }
     }]
   })
@@ -65,6 +65,7 @@ resource "aws_iam_role_policy" "bastion_eks" {
   })
 }
 
+# Make bastion to be able to sync Terraform state to and from s3 bucket
 resource "aws_iam_role_policy" "bastion_tfstate" {
   name = "${var.env}-bastion-tfstate-policy"
   role = aws_iam_role.bastion.id
@@ -170,23 +171,66 @@ resource "aws_ec2_instance_connect_endpoint" "bastion" {
 
 resource "aws_instance" "bastion" {
   ami                         = data.aws_ami.amazon_linux.id
-  instance_type               = "t3.micro"
+  instance_type               = var.instance_type
   subnet_id                   = var.private_subnet_id
   vpc_security_group_ids      = [aws_security_group.bastion.id]
   associate_public_ip_address = false
   iam_instance_profile        = aws_iam_instance_profile.bastion.name
 
+  # IMDSv2 required — prevents SSRF attacks from stealing instance credentials
+  # IMDSv2 (Instance Metadata Service Version 2)
+  # ทำไมถึงปลอดภัยกว่ารุ่นเก่า (IMDSv1): รุ่นเก่ามีช่องโหว่ที่แฮกเกอร์อาจหลอกให้เซิร์ฟเวอร์ส่งข้อมูลสำคัญออกมาจากภายนอกได้ (SSRF - Server-Side Request Forgery) 
+  # IMDSv2 จึงอัปเกรดการทำงานโดยบังคับให้มีการขอ Session Token ทุกครั้งที่ต้องการเรียกดูข้อมูล ป้องกันการสุ่มดึงข้อมูลโดยไม่ได้รับอนุญาต
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  # Encrypted root volume — protects data at rest if volume snapshot is exposed
+  # 30GB minimum — Amazon Linux 2023 AMI snapshot requires >= 30GB
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 30
+    encrypted             = true
+    delete_on_termination = true
+  }
+
   user_data = <<-EOF
     #!/bin/bash
-    # Install kubectl (pinned to match EKS cluster version)
-    KUBECTL_VERSION="v1.35.0"
-    curl -LO "https://dl.k8s.io/release/$${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-    chmod +x kubectl && mv -f kubectl /usr/local/bin/kubectl
+    set -euo pipefail
+    exec > >(tee /var/log/user-data.log | logger -t user-data) 2>&1
 
-    # Install Helm
+    # ── kubectl (pin to match EKS cluster version) ──────────────────────────────
+    # Version is rendered by Terraform at plan time — avoids $$ escaping issues
+    curl -LO "https://dl.k8s.io/release/v${var.kubernetes_version}.0/bin/linux/amd64/kubectl"
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm -f kubectl
+    echo "kubectl $(kubectl version --client) installed"
+
+    # ── Helm ────────────────────────────────────────────────────────────────────
     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    echo "Helm $(helm version --short) installed"
 
-    # Wait for EKS cluster to be ACTIVE before configuring kubeconfig
+    # ── GitHub CLI (AL2023 uses dnf) ────────────────────────────────────────────
+    dnf install -y 'dnf-command(config-manager)'
+    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+    dnf install -y gh
+    echo "GitHub CLI $(gh --version | head -1) installed"
+
+    # ── Terraform (AL2023 + HashiCorp repo) ─────────────────────────────────────
+    dnf install -y dnf-plugins-core
+    dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+    dnf install -y terraform
+    echo "Terraform $(terraform version | head -1) installed"
+
+    # ── ArgoCD CLI ──────────────────────────────────────────────────────────────
+    curl -Lo argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+    install -o root -g root -m 0755 argocd /usr/local/bin/argocd
+    rm -f argocd
+    echo "ArgoCD CLI $(argocd version --client --short) installed"
+
+    # ── Wait for EKS cluster to be ACTIVE ───────────────────────────────────────
     echo "Waiting for EKS cluster ${var.cluster_name} to be ACTIVE..."
     until aws eks describe-cluster \
         --name ${var.cluster_name} \
@@ -196,23 +240,19 @@ resource "aws_instance" "bastion" {
       echo "EKS not ready yet, retrying in 30s..."
       sleep 30
     done
+    echo "EKS cluster is ACTIVE"
 
-    # Configure kubeconfig for EKS
+    # ── kubeconfig for both root and ec2-user ───────────────────────────────────
     aws eks update-kubeconfig --region ${var.region} --name ${var.cluster_name}
-    echo "kubeconfig updated successfully"
 
-    # Install gh cli for Github auth (optional) for AML2 which doesn't have it by default
-    type -p yum-config-manager >/dev/null || sudo yum install yum-utils
-    sudo yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
-    sudo yum install gh
-    sudo yum update gh
-    echo "GitHub CLI installed successfully"
-
-    # Install Terraforms AWS CLI v2 plugin for EKS (optional, but useful for debugging and manual operations)
-    sudo yum install -y yum-utils
-    sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-    sudo yum install -y terraform
-    terraform -version
+    # Also configure for ec2-user (the SSH login user)
+    mkdir -p /home/ec2-user/.kube
+    aws eks update-kubeconfig \
+      --region ${var.region} \
+      --name ${var.cluster_name} \
+      --kubeconfig /home/ec2-user/.kube/config
+    chown -R ec2-user:ec2-user /home/ec2-user/.kube
+    echo "kubeconfig configured for root and ec2-user"
   EOF
 
   tags = {

@@ -6,17 +6,28 @@ kind: ClusterRole
 metadata:
   name: traefik
 rules:
-  - apiGroups: [""] # <- which API group the resource belongs to. "" means the core API group
-    resources: [services, endpoints, secrets] # <- which resources the rule applies to
+  - apiGroups: [""] # core API group — built-in Kubernetes primitives (Pod, Service, Secret, ConfigMap, etc.)
+    resources:
+      - services    # Service objects — Traefik reads these to discover backend pods to route traffic to
+      - endpoints   # Endpoints objects — the actual pod IPs behind each Service (used for load balancing)
+      - secrets     # Secret objects — Traefik reads TLS secrets (e.g. traefik-tls) to terminate HTTPS
     verbs: [get, list, watch]
-  - apiGroups: [networking.k8s.io] # <- which API group the resource belongs to
-    resources: [ingresses, ingressclasses] # <- which resources the rule applies to
+
+  - apiGroups: [networking.k8s.io] # networking API group — standard Ingress resources
+    resources:
+      - ingresses       # Ingress objects — standard K8s HTTP routing rules (used by cert-manager HTTP-01 challenge)
+      - ingressclasses  # IngressClass objects — identifies which ingress controller owns which Ingress (e.g. "traefik")
     verbs: [get, list, watch]
+
   - apiGroups: [networking.k8s.io]
-    resources: [ingresses/status]
+    resources:
+      - ingresses/status  # subresource of Ingress — Traefik writes back the load balancer IP/hostname here
     verbs: [update]
-  - apiGroups: [traefik.io]
-    resources: ["*"]
+
+  - apiGroups: [traefik.io] # Traefik's own CRD API group — custom resources specific to Traefik
+    resources:
+      - "*" # all Traefik CRDs: IngressRoute, IngressRouteTCP, IngressRouteUDP, Middleware,
+            # TLSOption, TLSStore, TraefikService, ServersTransport, etc.
     verbs: [get, list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -29,5 +40,5 @@ roleRef:
   name: traefik # <- which ClusterRole to bind to, in this case we define it as "traefik" on line 7th
 subjects:
   - kind: ServiceAccount
-    name: traefik-service-account # <- which ServiceAccount to bind, in this case we define it as "traefik-service-account"  on servie-account.yaml
+    name: {{ .Values.serviceAccountName }} # <- which ServiceAccount to bind, in this case we define it as "traefik-service-account"  on servie-account.yaml
     namespace: traefik

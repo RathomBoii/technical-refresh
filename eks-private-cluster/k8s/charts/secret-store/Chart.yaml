@@ -1,0 +1,13 @@
+apiVersion: v2
+name: secret-store
+description: Secret Store wrapper chart — installs external-secrets for managing secrets
+type: application
+version: 1.0.0
+appVersion: "v0.5.0"  # external-secrets app version
+# Pull the official external-secrets chart as a dependency.
+# This installs external-secrets operator and all CRDs/RBAC automatically.
+# You only override values in values.yaml — no need to write pod manifests yourself.
+dependencies:
+  - name: external-secrets
+    version: "2.5.0"  # pin chart version for reproducibility
+    repository: "https://charts.external-secrets.io"

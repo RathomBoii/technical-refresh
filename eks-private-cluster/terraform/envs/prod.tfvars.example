@@ -1,0 +1,56 @@
+# ── Prod Environment — copy to prod.tfvars and fill in your values ─────────────
+env    = "prod"
+region = "ap-southeast-7"
+
+# Cluster
+cluster_name       = "eks-prod"
+kubernetes_version = "1.35"
+
+# Network — 3 AZs for high availability in production
+vpc_cidr              = "10.5.0.0/16"
+is_single_nat_gateway = true # Set false for HA: one NAT Gateway per AZ
+private_subnets       = ["10.5.1.0/24", "10.5.2.0/24", "10.5.3.0/24"]
+public_subnets        = ["10.5.101.0/24", "10.5.102.0/24", "10.5.103.0/24"]
+
+# Node group — larger for prod
+node_instance_type = "t3.medium"
+desired_nodes      = 3
+min_nodes          = 2
+max_nodes          = 4
+
+# EKS Admin Access — IAM user/role ARNs that need kubectl access
+# Get your ARN: aws sts get-caller-identity --query Arn --output text
+admin_principal_arns = [
+  "arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USERNAME>",
+]
+
+# ECR
+ecr_repo_name            = "helloworld"
+ecr_image_tag_mutability = "IMMUTABLE"
+
+# Terraform state bucket — must exist before first apply (see README Step 0)
+tfstate_bucket = "<STATE_BUCKET_NAME>"
+
+# App
+helloworld_namespace = "prod-app"
+# helloworld_api_key_value — do NOT set here. Pass via env var:
+#   export TF_VAR_helloworld_api_key_value="your-secret-value"
+
+# ESO (External Secrets Operator)
+eso_namespace            = "external-secrets"
+eso_service_account_name = "eks-secret-store-irsa"
+
+# RDS PostgreSQL
+rds_db_identifier           = "postgres-prod"
+rds_db_name                 = "appdb"
+rds_db_username             = "pgadmin"
+rds_instance_class          = "db.t3.micro"
+rds_multi_az                = false  # Set true for HA standby replica in prod
+rds_backup_retention_period = 7
+rds_skip_final_snapshot     = true   # Set false in prod to retain final snapshot
+rds_deletion_protection     = false  # Set true in prod to prevent accidental delete
+
+# GitHub Actions CI/CD
+github_org                  = "<GITHUB_ORG_OR_USERNAME>"  # e.g. RathomBoii
+github_repo                 = "<GITHUB_REPO_NAME>"        # e.g. technical-refresh
+create_github_oidc_provider = false # false on prod — OIDC provider already created by dev env

@@ -1,0 +1,59 @@
+# ── Dev Environment — copy to dev.tfvars and fill in your values ──────────────
+env    = "dev"
+region = "ap-southeast-7"
+
+# Cluster
+cluster_name       = "eks-dev"
+kubernetes_version = "1.31"
+
+# Network
+vpc_cidr              = "10.4.0.0/16"
+is_single_nat_gateway = true # Cost-saving for dev; set false in prod for HA
+private_subnets       = ["10.4.1.0/24", "10.4.2.0/24"]
+public_subnets        = ["10.4.0.0/24", "10.4.3.0/24"]
+
+# Node group — small for dev
+node_instance_type = "t3.large"
+desired_nodes      = 2
+min_nodes          = 1
+max_nodes          = 3
+
+# EKS Admin Access — IAM user/role ARNs that need kubectl access
+# Get your ARN: aws sts get-caller-identity --query Arn --output text
+admin_principal_arns = [
+  "arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USERNAME>",
+]
+
+# ECR
+ecr_repo_name            = "helloworld"
+ecr_image_tag_mutability = "MUTABLE"
+
+# Terraform state bucket — must exist before first apply (see README Step 0)
+tfstate_bucket = "<STATE_BUCKET_NAME>"
+
+# App
+helloworld_image_tag  = "latest"
+helloworld_replicas   = 1
+argocd_version        = "6.7.0"
+helloworld_namespace  = "dev-app"
+# helloworld_api_key_value — do NOT set here. Pass via env var:
+#   export TF_VAR_helloworld_api_key_value="your-secret-value"
+
+# ESO (External Secrets Operator)
+eso_namespace            = "external-secrets"
+eso_service_account_name = "eks-secret-store-irsa"
+
+# RDS PostgreSQL
+rds_db_identifier           = "postgres-dev"
+rds_db_name                 = "appdb"
+rds_db_username             = "pgadmin"
+rds_instance_class          = "db.t3.micro"
+rds_multi_az                = false
+rds_backup_retention_period = 1
+rds_skip_final_snapshot     = true
+rds_deletion_protection     = false
+
+# GitHub Actions CI/CD
+github_org                  = "<GITHUB_ORG_OR_USERNAME>"  # e.g. RathomBoii
+github_repo                 = "<GITHUB_REPO_NAME>"        # e.g. technical-refresh
+create_github_oidc_provider = true # true on dev (first env) — account-scoped, only create once

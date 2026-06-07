@@ -1,3 +1,32 @@
+# =============================================================================
+# TRAEFIK MIDDLEWARE EXAMPLES
+# =============================================================================
+# A Middleware sits between the IngressRoute and the backend service.
+# It transforms requests/responses or enforces policies before forwarding.
+#
+# Each middleware below is commented out except the active one (basicAuth).
+# To use one: uncomment it and reference its name in your IngressRoute:
+#
+#   routes:
+#     - match: Host(`example.com`)
+#       middlewares:
+#         - name: <middleware-name>
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# 1. BASIC AUTH (ACTIVE)
+# Protects a route with username/password. Browser shows a login prompt.
+# Best for: internal dashboards (Traefik, Prometheus, pgAdmin).
+# Credentials are htpasswd-bcrypt hashed and stored in a k8s Secret.
+#
+# Create secret:
+#   kubectl create secret generic traefik-dashboard-auth-secret \
+#     -n traefik \
+#     --from-literal=users='admin:<htpasswd-bcrypt-hash>'
+#
+# Generate hash: htpasswd -nbB admin <your-password>
+# -----------------------------------------------------------------------------
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -5,10 +34,218 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   basicAuth:
-    # Secret must be created manually on the cluster (not stored in Git):
-    #   kubectl create secret generic traefik-dashboard-auth-secret \
-    #     -n traefik \
-    #     --from-literal=users='admin:<htpasswd-bcrypt-hash>'
-    #
-    # Generate hash with: htpasswd -nbB admin <your-password>
     secret: traefik-dashboard-auth-secret
+---
+
+
+# -----------------------------------------------------------------------------
+# 2. REDIRECT SCHEME (HTTP → HTTPS)
+# Permanently redirects all plain HTTP traffic to HTTPS.
+# Best for: every public-facing route. Always pair with a TLS IngressRoute.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: redirect-to-https
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   redirectScheme:
+#     scheme: https       # target scheme
+#     permanent: true     # 301 redirect (SEO-friendly); false = 302 temporary
+---
+
+
+# -----------------------------------------------------------------------------
+# 3. STRIP PREFIX
+# Removes a path prefix before forwarding to the backend.
+# Best for: backends mounted at / but exposed at /api/v1.
+# Example: request /api/v1/users → forwarded as /users to the backend.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: strip-api-prefix
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   stripPrefix:
+#     prefixes:
+#       - /api/v1          # prefix to strip from the request path
+---
+
+
+# -----------------------------------------------------------------------------
+# 4. ADD PREFIX
+# Prepends a path prefix before forwarding to the backend.
+# Best for: backends that expect requests under a sub-path.
+# Example: request /users → forwarded as /api/users to the backend.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: add-api-prefix
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   addPrefix:
+#     prefix: /api         # prefix to add to the request path
+---
+
+
+# -----------------------------------------------------------------------------
+# 5. HEADERS — Security / CORS
+# Adds or overrides HTTP headers on requests or responses.
+# Best for: enforcing HSTS, content security policy, CORS on APIs.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: security-headers
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   headers:
+#     # --- Security response headers ---
+#     stsSeconds: 31536000              # HSTS: browser forces HTTPS for 1 year
+#     stsIncludeSubdomains: true
+#     forceSTSHeader: true
+#     contentTypeNosniff: true          # Prevent MIME-type sniffing
+#     browserXssFilter: true            # Enable XSS filter in older browsers
+#     frameDeny: true                   # Deny embedding in iframes (clickjacking)
+#     # --- CORS headers (for APIs) ---
+#     accessControlAllowOriginList:
+#       - "https://app.example.com"
+#     accessControlAllowMethods:
+#       - GET
+#       - POST
+#       - OPTIONS
+#     accessControlAllowHeaders:
+#       - "Authorization"
+#       - "Content-Type"
+---
+
+
+# -----------------------------------------------------------------------------
+# 6. RATE LIMIT
+# Throttles requests per source IP to protect against abuse or DDoS.
+# Best for: public APIs, login endpoints.
+# average: max sustained requests/sec; burst: short spike allowance.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: rate-limit
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   rateLimit:
+#     average: 100         # max 100 requests/second on average
+#     burst: 50            # allow burst of 50 extra requests above the average
+---
+
+
+# -----------------------------------------------------------------------------
+# 7. IP WHITELIST
+# Blocks all requests except from specified IP ranges (CIDR).
+# Best for: restricting admin routes to office/VPN IPs only.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: ip-whitelist
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   ipWhiteList:
+#     sourceRange:
+#       - "10.0.0.0/8"     # internal VPC CIDR
+#       - "203.0.113.5/32" # specific trusted public IP
+---
+
+
+# -----------------------------------------------------------------------------
+# 8. COMPRESS
+# Enables gzip/brotli compression on responses.
+# Best for: static assets, JSON APIs — reduces bandwidth and improves latency.
+# No configuration needed; Traefik negotiates encoding via Accept-Encoding header.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: compress
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   compress: {}
+---
+
+
+# -----------------------------------------------------------------------------
+# 9. RETRY
+# Retries the request to the backend if it fails (connection error / 5xx).
+# Best for: backends with occasional cold starts or transient failures.
+# WARNING: only use on idempotent routes (GET) — retrying POST can duplicate actions.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: retry
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   retry:
+#     attempts: 3          # retry up to 3 times before returning error to client
+#     initialInterval: 100ms
+---
+
+
+# -----------------------------------------------------------------------------
+# 10. CIRCUIT BREAKER
+# Stops forwarding requests when the backend is unhealthy (too many errors).
+# Best for: preventing cascading failures across microservices.
+# expression: trip the breaker when >30% of requests return 5xx in last 10 requests.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: circuit-breaker
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   circuitBreaker:
+#     expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30"
+---
+
+
+# -----------------------------------------------------------------------------
+# 11. FORWARD AUTH
+# Delegates authentication to an external service (OAuth2, OIDC, JWT validator).
+# Best for: production-grade SSO — plug in oauth2-proxy, Keycloak, or Cognito.
+# Flow: Traefik sends every request to the auth service first.
+#       If auth returns 2xx → forward to backend.
+#       If auth returns 401/403 → return error or redirect to login.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: forward-auth
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   forwardAuth:
+#     address: "http://oauth2-proxy.traefik.svc.cluster.local/oauth2/auth"  # internal auth service URL
+#     trustForwardHeader: true          # trust X-Forwarded-* headers from upstream
+#     authResponseHeaders:             # copy these headers from auth response into the forwarded request
+#       - "X-Auth-User"
+#       - "X-Auth-Email"
+---
+
+
+# -----------------------------------------------------------------------------
+# 12. CHAIN — Combine multiple middlewares
+# Groups multiple middlewares into one reusable unit.
+# Best for: applying a standard policy (redirect + headers + rate-limit) to many routes
+#           without repeating all middleware names on each IngressRoute.
+# -----------------------------------------------------------------------------
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: secure-chain
+#   namespace: {{ .Values.namespace }}
+# spec:
+#   chain:
+#     middlewares:
+#       - name: redirect-to-https    # first: force HTTPS
+#       - name: security-headers     # second: add security headers
+#       - name: rate-limit           # third: throttle requests
