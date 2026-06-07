@@ -181,3 +181,19 @@ variable "eso_service_account_name" {
   type        = string
   default     = "eks-secret-store-irsa"
 }
+# ── GitHub Actions CI/CD ──────────────────────────────────────────────────────
+variable "github_org" {
+  description = "GitHub organisation or user name that owns the repo (e.g. RathomBoii)"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name (e.g. technical-refresh)"
+  type        = string
+}
+
+variable "create_github_oidc_provider" {
+  description = "Set true only on the first env (dev). The GitHub OIDC provider is AWS-account-scoped — creating it twice causes an error."
+  type        = bool
+  default     = false
+}

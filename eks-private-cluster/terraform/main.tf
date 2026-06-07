@@ -98,6 +98,11 @@ module "iam" {
 
   eso_namespace            = var.eso_namespace
   eso_service_account_name = var.eso_service_account_name
+
+  github_org                  = var.github_org
+  github_repo                 = var.github_repo
+  ecr_repo_name               = var.ecr_repo_name
+  create_github_oidc_provider = var.create_github_oidc_provider
 }
 
 
