@@ -68,7 +68,7 @@ jobs:
 
   build-scan-push:
     name: Build → Scan → Push
-    # needs: sast                  # Wait for SAST to pass
+    needs: human-approval          # Wait for manual approval before building and pushing
     runs-on: ubuntu-latest
     permissions:
       contents: read
