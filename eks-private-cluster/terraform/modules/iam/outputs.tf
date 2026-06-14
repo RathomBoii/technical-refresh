@@ -1,11 +1,11 @@
-output "helloworld_role_arn" {
-  description = "IAM role ARN for helloworld pod — paste into values-dev/prod.yaml as serviceAccount.roleArn"
-  value       = aws_iam_role.helloworld.arn
+output "app_role_arn" {
+  description = "IAM role ARN for app pod — paste into values-dev/prod.yaml as serviceAccount.roleArn"
+  value       = aws_iam_role.app.arn
 }
 
-output "helloworld_api_key_secret_name" {
+output "app_api_key_secret_name" {
   description = "Secrets Manager secret name — use as objectName in SecretProviderClass"
-  value       = var.helloworld_api_key_secret_name
+  value       = var.app_api_key_secret_name
 }
 
 output "lbc_role_arn" {

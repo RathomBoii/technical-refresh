@@ -82,7 +82,7 @@ module "secrets" {
   source                   = "./modules/secrets"
 
   env                      = var.env
-  helloworld_api_key_value = var.helloworld_api_key_value
+  app_api_key_value = var.app_api_key_value
 }
 
 module "iam" {
@@ -93,8 +93,8 @@ module "iam" {
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider     = module.eks.oidc_provider
 
-  helloworld_namespace           = var.helloworld_namespace
-  helloworld_api_key_secret_name = module.secrets.helloworld_api_key_secret_name
+  app_namespace           = var.app_namespace
+  app_api_key_secret_name = module.secrets.app_api_key_secret_name
 
   eso_namespace            = var.eso_namespace
   eso_service_account_name = var.eso_service_account_name

@@ -67,9 +67,9 @@ variable "admin_principal_arns" {
 }
 
 variable "ecr_repo_name" {
-  description = "ECR repository name for helloworld app"
+  description = "ECR repository name for app app"
   type        = string
-  default     = "helloworld"
+  default     = "app"
 }
 
 variable "ecr_image_tag_mutability" {
@@ -78,14 +78,14 @@ variable "ecr_image_tag_mutability" {
   default     = "IMMUTABLE"
 }
 
-variable "helloworld_image_tag" {
-  description = "Docker image tag for helloworld app"
+variable "app_image_tag" {
+  description = "Docker image tag for app app"
   type        = string
   default     = "latest"
 }
 
-variable "helloworld_replicas" {
-  description = "Number of helloworld pod replicas"
+variable "app_replicas" {
+  description = "Number of app pod replicas"
   type        = number
   default     = 1
 }
@@ -157,14 +157,14 @@ variable "rds_deletion_protection" {
 }
 
 # ── IAM / App secrets ─────────────────────────────────────────────────────────
-variable "helloworld_namespace" {
-  description = "Kubernetes namespace where helloworld is deployed"
+variable "app_namespace" {
+  description = "Kubernetes namespace where app is deployed"
   type        = string
   default     = "dev-app"
 }
 
-variable "helloworld_api_key_value" {
-  description = "Initial value for helloworld API key secret in Secrets Manager. Pass via TF_VAR_helloworld_api_key_value env var — never commit to tfvars."
+variable "app_api_key_value" {
+  description = "Initial value for app API key secret in Secrets Manager. Pass via TF_VAR_app_api_key_value env var — never commit to tfvars."
   type        = string
   sensitive   = true
   default     = "changeme-replace-before-use"

@@ -3,8 +3,8 @@ variable "env" {
   type        = string
 }
 
-variable "helloworld_api_key_value" {
-  description = "Initial value for helloworld API key secret. Pass via TF_VAR_helloworld_api_key_value — never commit the real value to tfvars."
+variable "app_api_key_value" {
+  description = "Initial value for app API key secret. Pass via TF_VAR_app_api_key_value — never commit the real value to tfvars."
   type        = string
   sensitive   = true
 }

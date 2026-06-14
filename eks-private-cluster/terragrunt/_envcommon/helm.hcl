@@ -21,7 +21,7 @@ dependency "ecr" {
   config_path = "../ecr"
 
   mock_outputs = {
-    repository_url = "123456789012.dkr.ecr.ap-southeast-7.amazonaws.com/dev-helloworld"
+    repository_url = "123456789012.dkr.ecr.ap-southeast-7.amazonaws.com/dev-app"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
@@ -32,7 +32,7 @@ inputs = {
   cluster_ca_data      = dependency.eks.outputs.cluster_ca_data
   cluster_name         = local.env_vars.locals.cluster_name
   ecr_repo             = dependency.ecr.outputs.repository_url
-  helloworld_image_tag = local.env_vars.locals.helloworld_image_tag
-  helloworld_replicas  = local.env_vars.locals.helloworld_replicas
+  app_image_tag = local.env_vars.locals.app_image_tag
+  app_replicas  = local.env_vars.locals.app_replicas
   argocd_version       = local.env_vars.locals.argocd_version
 }

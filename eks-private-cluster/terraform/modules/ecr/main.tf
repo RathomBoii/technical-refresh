@@ -1,4 +1,4 @@
-resource "aws_ecr_repository" "helloworld" {
+resource "aws_ecr_repository" "app" {
   name                 = "${var.env}-${var.repo_name}"
   image_tag_mutability = var.image_tag_mutability
 
@@ -12,8 +12,8 @@ resource "aws_ecr_repository" "helloworld" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "helloworld" {
-  repository = aws_ecr_repository.helloworld.name
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
 
   policy = jsonencode({
     rules = [{

@@ -18,13 +18,13 @@ variable "oidc_provider" {
   type        = string
 }
 
-variable "helloworld_namespace" {
-  description = "Kubernetes namespace where helloworld is deployed (must match helm chart destination)"
+variable "app_namespace" {
+  description = "Kubernetes namespace where app is deployed (must match helm chart destination)"
   type        = string
   default     = "dev-app"
 }
 
-variable "helloworld_api_key_secret_name" {
+variable "app_api_key_secret_name" {
   description = "Secrets Manager secret name from the secrets module — passed through to output for convenience"
   type        = string
 }
@@ -54,7 +54,7 @@ variable "github_repo" {
 variable "ecr_repo_name" {
   description = "ECR repository base name — used to scope the push policy to <env>-<repo_name>"
   type        = string
-  default     = "helloworld"
+  default     = "app"
 }
 
 variable "create_github_oidc_provider" {

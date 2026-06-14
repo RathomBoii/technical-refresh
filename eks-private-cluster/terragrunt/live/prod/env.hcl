@@ -22,14 +22,14 @@ locals {
   admin_principal_arns = ["arn:aws:iam::<AWS_ACCOUNT_ID>:role/<EKS_ADMIN_ROLE_NAME>"]
 
   # ECR
-  ecr_repo_name            = "helloworld"
+  ecr_repo_name            = "app"
   ecr_image_tag_mutability = "IMMUTABLE"
 
   # Terraform state bucket
   tfstate_bucket = "<TFSTATE_BUCKET_NAME>"
 
   # App
-  helloworld_image_tag = "1.0.0"
-  helloworld_replicas  = 3
+  app_image_tag = "1.0.0"
+  app_replicas  = 3
   argocd_version       = "6.7.0"
 }

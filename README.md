@@ -321,8 +321,6 @@ kubectl get nodes
 
 ---
 
-### Step 7 — Build and push the helloworld image to ECR
-
 This is handled automatically by the **GitHub Actions CI/CD pipeline** (`.github/workflows/ci-cd-pipeline.yaml`). You do not need to build or push manually.
 
 **Trigger:** push a Git tag matching `v*` or `release/**`

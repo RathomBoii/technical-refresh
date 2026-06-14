@@ -1,11 +1,11 @@
-# ── helloworld IRSA role ───────────────────────────────────────────────────────
-# Allows the helloworld pod's Kubernetes ServiceAccount to call AWS Secrets Manager.
+# ── app IRSA role ───────────────────────────────────────────────────────
+# Allows the app pod's Kubernetes ServiceAccount to call AWS Secrets Manager.
 # The pod's ServiceAccount must be annotated with this role ARN.
 
 # The role's trust policy allows sts:AssumeRoleWithWebIdentity from the OIDC provider ARN for the EKS cluster,
 # but only if the token's "sub" claim matches the expected ServiceAccount and namespace, and the "aud" claim is sts.amazonaws.com.
-resource "aws_iam_role" "helloworld" {
-  name = "${var.env}-helloworld"
+resource "aws_iam_role" "app" {
+  name = "${var.env}-app"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,9 +16,9 @@ resource "aws_iam_role" "helloworld" {
       Condition = {
         StringEquals = {
           # Must match exactly: namespace and ServiceAccount name in the helm chart
-          # helloworld is a application's EKS namespace, revise it as your actual application namespace.
+          # app is a application's EKS namespace, revise it as your actual application namespace.
           #* Pattern is: system:serviceaccount:<namespace>:<serviceaccount-name>
-          "${var.oidc_provider}:sub" = "system:serviceaccount:${var.helloworld_namespace}:helloworld"
+          "${var.oidc_provider}:sub" = "system:serviceaccount:${var.app_namespace}:app"
           "${var.oidc_provider}:aud" = "sts.amazonaws.com"
         }
       }
@@ -26,16 +26,16 @@ resource "aws_iam_role" "helloworld" {
   })
 
   tags = {
-    Name = "${var.env}-helloworld"
+    Name = "${var.env}-app"
     Env  = var.env
   }
 }
 
 
-# The policy of line 7 role allows read-only access to Secrets Manager secrets under /<env>/helloworld/*.
-resource "aws_iam_role_policy" "helloworld_secrets" {
-  name = "${var.env}-helloworld-secrets"
-  role = aws_iam_role.helloworld.id
+# The policy of line 7 role allows read-only access to Secrets Manager secrets under /<env>/app/*.
+resource "aws_iam_role_policy" "app_secrets" {
+  name = "${var.env}-app-secrets"
+  role = aws_iam_role.app.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -45,9 +45,9 @@ resource "aws_iam_role_policy" "helloworld_secrets" {
         "secretsmanager:GetSecretValue",
         "secretsmanager:DescribeSecret"
       ]
-      # Scoped to only secrets under /<env>/helloworld/
+      # Scoped to only secrets under /<env>/app/
       # Wildcard suffix (-??????) matches the 6-char random suffix AWS appends to secret ARNs
-      Resource = "arn:aws:secretsmanager:${var.region}:*:secret:/${var.env}/helloworld/*"
+      Resource = "arn:aws:secretsmanager:${var.region}:*:secret:/${var.env}/app/*"
     }]
   })
 }
@@ -282,7 +282,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
           "ecr:CompleteLayerUpload",
           "ecr:PutImage"
         ]
-        # Scoped to the env-specific ECR repo only (e.g. dev-helloworld)
+        # Scoped to the env-specific ECR repo only (e.g. dev-app)
         Resource = "arn:aws:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/${var.env}-${var.ecr_repo_name}"
       }
     ]

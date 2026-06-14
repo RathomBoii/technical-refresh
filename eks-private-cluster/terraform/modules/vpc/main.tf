@@ -118,7 +118,7 @@ resource "aws_vpc_endpoint" "sts" {
   }
 }
 
-# Secrets Manager Interface endpoint — required for ESO and helloworld pods
+# Secrets Manager Interface endpoint — required for ESO and app pods
 # running in private subnets to fetch secrets without routing through NAT.
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = module.vpc.vpc_id

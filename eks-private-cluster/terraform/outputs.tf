@@ -4,7 +4,7 @@ output "cluster_endpoint" {
 }
 
 output "ecr_repository_url" {
-  description = "ECR repository URL for helloworld image"
+  description = "ECR repository URL for app image"
   value       = module.ecr.repository_url
 }
 
@@ -28,14 +28,14 @@ output "public_subnet_ids" {
   value       = module.vpc.public_subnet_ids
 }
 
-output "helloworld_irsa_role_arn" {
-  description = "IAM role ARN for helloworld pod — use as serviceAccount.roleArn in values-dev/prod.yaml"
-  value       = module.iam.helloworld_role_arn
+output "app_irsa_role_arn" {
+  description = "IAM role ARN for app pod — use as serviceAccount.roleArn in values-dev/prod.yaml"
+  value       = module.iam.app_role_arn
 }
 
-output "helloworld_api_key_secret_name" {
-  description = "Secrets Manager secret name for helloworld api-key — use as objectName in SecretProviderClass"
-  value       = module.secrets.helloworld_api_key_secret_name
+output "app_api_key_secret_name" {
+  description = "Secrets Manager secret name for app api-key — use as objectName in SecretProviderClass"
+  value       = module.secrets.app_api_key_secret_name
 }
 
 output "lbc_role_arn" {
