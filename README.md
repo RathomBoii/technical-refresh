@@ -10,6 +10,8 @@ A **production-grade private EKS cluster on AWS**, deployed via Infrastructure a
 
 The project demonstrates two IaC deployment paths (plain Terraform and Terragrunt) and a full GitOps workload delivery pipeline using ArgoCD.
 
+![alt text](architecture.png)
+
 ---
 
 ## 2. What Does This Project Do
