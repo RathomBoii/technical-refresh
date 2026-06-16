@@ -14,6 +14,11 @@ env:
   IMAGE_TAG: ${{ github.ref_name }}  
   AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
 
+permissions:
+  contents: write        # allow create-pull-request to push a branch
+  pull-requests: write   # allow create-pull-request to open a PR
+  id-token: write        # OIDC for AWS credential federation
+
 jobs:
   sast:
     name: SAST — Semgrep Code Pattern
@@ -187,7 +192,12 @@ jobs:
       - name: Create PR for image tag update
         uses: peter-evans/create-pull-request@v6
         with:
-          # token: ${{ secrets.K8S_REPO_TOKEN }}  # Only needed for a separate k8s repo — omit for monorepo (uses GITHUB_TOKEN by default)
+          token: ${{ secrets.GITHUB_TOKEN }}  # Auto-provided by GitHub on every run — no setup needed.
+          # Requires repo Settings → Actions → General → Workflow permissions:
+          #   ✅ "Read and write permissions"
+          #   ✅ "Allow GitHub Actions to create and approve pull requests"
+          # token: ${{ secrets.K8S_REPO_TOKEN }}  # Swap to a PAT only if targeting a separate repo
+          base: main
           commit-message: "chore: update image to ${{ env.IMAGE_TAG }}"
           branch: "release/${{ env.IMAGE_TAG }}"
           title: "🚀 Deploy ${{ env.IMAGE_TAG }} to production"
