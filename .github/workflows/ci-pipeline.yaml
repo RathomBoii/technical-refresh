@@ -183,14 +183,17 @@ jobs:
         uses: mikefarah/yq@v4
         with:
           cmd: |
-            yq -i '.image.repository = strenv(ECR_IMAGE)' eks-private-cluster/k8s/charts/app/values-dev.yaml
-            yq -i '.image.tag = strenv(IMAGE_TAG)' eks-private-cluster/k8s/charts/app/values-dev.yaml
+            yq -i '.image.repository = strenv(ECR_IMAGE)' eks-private-cluster/k8s/charts/app/values-prod.yaml
+            yq -i '.image.tag = strenv(IMAGE_TAG)' eks-private-cluster/k8s/charts/app/values-prod.yaml
         env:
           ECR_IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
+      - name: Check git diff
+        run: git diff
+
       - name: Create PR for image tag update
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  # Auto-provided by GitHub on every run — no setup needed.
           # Requires repo Settings → Actions → General → Workflow permissions:
@@ -206,3 +209,7 @@ jobs:
             - Image: `${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}`
             - Trivy scan: ✅ Passed
             - Triggered by: ${{ github.actor }}
+     
+      - name: Show PR URL                         # ← confirm it was created
+        if: ${{ steps.cpr.outputs.pull-request-url }}
+        run: echo "::notice::PR created at ${{ steps.cpr.outputs.pull-request-url }}"
