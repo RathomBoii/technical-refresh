@@ -1,15 +1,13 @@
 # Dev environment overrides
 replicaCount: 2
 image:
-  repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/dev-app"
-  tag: "v.2.10"
-
+  repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-app"
+  tag: "v.2.15"
 env: "dev"
 namespace: "dev-app"
-
 secrets:
   enabled: true
   envVars:
-    - name: API_KEY          # env var name the application reads
-      secretName: app-secrets  # K8s Secret 
-      key: API_KEY           # key inside the K8s Secret
+    - name: API_KEY # env var name the application reads
+      secretName: app-secrets # K8s Secret 
+      key: API_KEY # key inside the K8s Secret
