@@ -2,14 +2,12 @@
 replicaCount: 1
 image:
   repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-app"
-  tag: "v.2.10"
-
+  tag: "v.2.18"
 env: "prod"
 namespace: "prod-app"
-
 secrets:
   enabled: true
   envVars:
-    - name: API_KEY          # env var name the application reads
-      secretName: app-secrets  # K8s Secret
-      key: API_KEY           # key inside the K8s Secret JSON structure
+    - name: API_KEY # env var name the application reads
+      secretName: app-secrets # K8s Secret
+      key: API_KEY # key inside the K8s Secret JSON structure
