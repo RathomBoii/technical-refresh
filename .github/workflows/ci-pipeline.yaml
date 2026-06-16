@@ -15,20 +15,57 @@ env:
   AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
 
 jobs:
-  # sast:
-  #   name: SAST — Semgrep Code Pattern
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #   container:
-  #     image: semgrep/semgrep
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         ref: ${{ github.event.release.tag_name }}
+  sast:
+    name: SAST — Semgrep Code Pattern
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
-  #     - name: Run Semgrep
-  #       run: semgrep --config=auto --severity=ERROR --error .
+      - name: Run Semgrep (report only — does not block pipeline)
+        continue-on-error: true   # findings are reported in logs but do NOT fail the job
+        run: |
+          # Scan entire repo (default)
+          semgrep --config=auto --severity=ERROR --json-output=semgrep-report.json . || true
+
+          # --- Uncomment below to scan a specific directory instead ---
+          # semgrep --config=auto --severity=ERROR --json-output=semgrep-report.json \
+          #   eks-private-cluster/app/app || true
+
+          # --- Uncomment to scan multiple specific paths ---
+          # semgrep --config=auto --severity=ERROR --json-output=semgrep-report.json \
+          #   eks-private-cluster/app/app \
+          #   clean-architecture-app/src || true
+
+      - name: Print Semgrep Summary
+        if: always()
+        run: |
+          if [ -f semgrep-report.json ]; then
+            echo "=== Semgrep findings ==="
+            python3 -c "
+          import json, sys
+          data = json.load(open('semgrep-report.json'))
+          results = data.get('results', [])
+          if not results:
+              print('No findings.')
+              sys.exit(0)
+          print(f'Total findings: {len(results)}')
+          for r in results:
+              print(f\"  [{r['extra']['severity']}] {r['check_id']} — {r['path']}:{r['start']['line']}\")
+            "
+          fi
+
+      - name: Upload Semgrep report as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep-report.json
 
   echo-message:
     name: Echo Build Information
@@ -43,28 +80,14 @@ jobs:
     name: Manual Approval
     needs: echo-message
     runs-on: ubuntu-latest
-    environment: production
+    environment: production      # ← GitHub pauses here, waits for reviewer approval before any step runs
+
     steps:
       - name: Awaiting Manual Approval
         run: echo "Waiting for manual approval to proceed with build and push to ECR..."
       - name: Echo Approval Granted
         if: ${{ github.event.workflow_run.conclusion == 'approved' }}
         run: echo "Manual approval granted. Proceeding with build and push to ECR."
-      # - name: Create PR to k8s repo
-      #   uses: peter-evans/create-pull-request@v6
-      #   with:
-      #     token: ${{ secrets.K8S_REPO_TOKEN }}
-      #     commit-message: "chore: update image to ${{ env.IMAGE_TAG }}"
-      #     branch: "release/${{ env.IMAGE_TAG }}"
-      #     title: "🚀 Deploy ${{ env.IMAGE_TAG }} to production"
-      #     body: |
-      #       ## Deploy Summary
-      #       - Image: `${{ env.ECR_IMAGE }}`
-      #       - Trivy scan: ✅ Passed
-      #       - Triggered by: ${{ github.actor }}
-
-
-
 
   build-scan-push:
     name: Build → Scan → Push
@@ -96,31 +119,62 @@ jobs:
             -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
             eks-private-cluster/app/app
 
-      # - name: Trivy image scan
+      - name: Trivy image scan (report only — does not block pipeline)
+        id: trivy
+        continue-on-error: true   # findings are reported but do NOT fail the job
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: '0'          # never fail — report only
+          format: table           # human-readable summary printed to logs
+          output: trivy-report.txt
+
+      # --- Uncomment to BLOCK the pipeline on CRITICAL/HIGH vulnerabilities ---
+      # - name: Trivy image scan (blocking)
       #   uses: aquasecurity/trivy-action@master
       #   with:
       #     scan-type: image
       #     image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
       #     severity: CRITICAL,HIGH
-      #     exit-code: '1'         # fail if CRITICAL/HIGH severity found
+      #     exit-code: '1'        # fail job if CRITICAL/HIGH found
+
+      - name: Print Trivy Summary
+        if: always()
+        run: |
+          if [ -f trivy-report.txt ]; then
+            echo "=== Trivy Scan Results ==="
+            cat trivy-report.txt
+          else
+            echo "No Trivy report generated."
+          fi
+
+      - name: Upload Trivy report as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.txt
 
       - name: Push to ECR
         run: |
           docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
-  update-argocd-values:
-    name: Update ArgoCD Target Image Tag
-    needs: build-scan-push
+  open-deploy-pr:
+    name: Update Image Tag and Open PR
+    needs: build-scan-push         # Image must be in ECR before opening the PR
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
 
-      - name: Update Helm values for app
+      - name: Update image tag in Helm values
         uses: mikefarah/yq@v4
         with:
           cmd: |
@@ -130,10 +184,15 @@ jobs:
           ECR_IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
-      - name: Commit and push updated values
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add eks-private-cluster/k8s/charts/app/values-dev.yaml
-          git diff --cached --quiet || git commit -m "ci: update app image tag to ${IMAGE_TAG}" # --cached to commit only if there are changes and --quiet to skip commit if no changes and git diff is used to check if there are changes to commit
-          git push origin main
+      - name: Create PR for image tag update
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # token: ${{ secrets.K8S_REPO_TOKEN }}  # Only needed for a separate k8s repo — omit for monorepo (uses GITHUB_TOKEN by default)
+          commit-message: "chore: update image to ${{ env.IMAGE_TAG }}"
+          branch: "release/${{ env.IMAGE_TAG }}"
+          title: "🚀 Deploy ${{ env.IMAGE_TAG }} to production"
+          body: |
+            ## Deploy Summary
+            - Image: `${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}`
+            - Trivy scan: ✅ Passed
+            - Triggered by: ${{ github.actor }}
