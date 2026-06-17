@@ -15,9 +15,7 @@ spec:
     targetRevision: v1.14.5
     helm:
       values: |
-        crds:
-          enabled: true   # install CRDs together with the operator (recommended by cert-manager)
-          keep: true      # do not delete CRDs on prune — prevents losing all issued certs
+        installCRDs: true # install cert-manager CRDs from this chart release
         # Full operator deployed: controller + webhook + cainjector
         # ClusterIssuer and Certificate are managed by the separate cert-manager ArgoCD app (wave 1)
   destination:
