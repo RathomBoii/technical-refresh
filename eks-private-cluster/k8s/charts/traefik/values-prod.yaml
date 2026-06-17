@@ -2,6 +2,16 @@ namespace: traefik
 
 serviceAccountName: traefik-service-account
 
+loadBalancer:
+  # Set public subnet IDs explicitly if AWS LBC cannot auto-discover subnets.
+  # Example:
+  # subnetIds:
+  #   - subnet-xxxxxxxxxxxxxxxxx
+  #   - subnet-yyyyyyyyyyyyyyyyy
+  subnetIds: 
+    - subnet-005aaaeb0ba0989f6
+    - subnet-000a1a1f863832af2
+
 image:
   repository: traefik
   tag: "v3.0.0"

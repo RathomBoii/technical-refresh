@@ -26,6 +26,12 @@ metadata:
     # Spread traffic across all AZs
     service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
 
+    # Optional: explicitly pin NLB subnets to avoid auto-discovery failures
+    # when subnets are tagged for different clusters.
+  {{- if .Values.loadBalancer.subnetIds }}
+    service.beta.kubernetes.io/aws-load-balancer-subnets: "{{ join "," .Values.loadBalancer.subnetIds }}"
+  {{- end }}
+
 spec:
   type: LoadBalancer
   selector:
