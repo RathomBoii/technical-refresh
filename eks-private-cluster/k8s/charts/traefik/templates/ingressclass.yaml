@@ -2,16 +2,18 @@
 # Required so:
 #   1. cert-manager HTTP-01 solver can create temporary Ingress objects (validated by LBC webhook)
 #   2. Kubernetes knows which controller handles Ingress resources with ingressClassName: traefik
-"""
-IngressClass is a cluster-scoped resource that defines a class of Ingress, 
-which allows you to specify which Ingress controller should handle 
-which Ingress resources. By creating an IngressClass named 
-'traefik', we tell Kubernetes that any Ingress resource 
-with ingressClassName: traefik should be handled by the Traefik ingress controller. 
-This is especially important for cert-manager's HTTP-01 challenge, which creates temporary Ingress resources 
-to verify domain ownership. If the IngressClass is not defined, cert-manager won't be able to create these temporary Ingresses, 
-and the certificate issuance will fail.
-"""
+# IngressClass is cluster-scoped and maps ingressClassName=traefik to
+# Traefik's controller implementation.
+
+#IngressClass is a cluster-scoped resource that defines a class of Ingress,
+#which allows you to specify which Ingress controller should handle
+#which Ingress resources. By creating an IngressClass named
+#'traefik', we tell Kubernetes that any Ingress resource
+#with ingressClassName: traefik should be handled by the Traefik ingress controller.
+#This is especially important for cert-manager's HTTP-01 challenge, which creates temporary Ingress resources
+#to verify domain ownership. If the IngressClass is not defined, cert-manager won't be able to create these temporary Ingresses,
+#and the certificate issuance will fail.
+
 
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
