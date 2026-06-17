@@ -15,7 +15,7 @@ metadata:
 spec:
   secretName: {{ .Values.secretName }}   # Traefik IngressRoute references this secret
   issuerRef:
-    name: {{ .Values.clusterIssuerName }} # e.g. "letsencrypt-prod"
+    name: {{ .Values.clusterIssuerName }}-{{ .Values.environment }} # e.g. "letsencrypt-prod"
     kind: {{ .Values.clusterIssuerKind }} # e.g. "ClusterIssuer"
   dnsNames:
     {{- range .Values.dnsNames }}
