@@ -1,3 +1,10 @@
+acmeEmail: "jessada.srmmn@gmail.com"
+environment: "prod"
+clusterIssuerName: "letsencrypt"
+clusterIssuerKind: "ClusterIssuer"
+ingressClassName: "traefik"
+secretName: "traefik-tls"
+
 dnsNames:
   - argocd.dev.wolffialampang.com
   - grafana.dev.wolffialampang.com
