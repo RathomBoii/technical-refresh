@@ -4,29 +4,22 @@ metadata:
   name: cert-manager-crds
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "0"   # install CRDs before cert-manager chart (wave 1)
+    argocd.argoproj.io/sync-wave: "0"   # deploys cert-manager operator before ClusterIssuer/Certificate (wave 1)
   finalizers:
     - resources-finalizer.argocd.argoproj.io/foreground
 spec:
   project: default
   source:
-    repoURL: https://charts.jetstack.io   # official cert-manager Helm registry — no vendoring needed
+    repoURL: https://charts.jetstack.io   # official cert-manager Helm registry
     chart: cert-manager
     targetRevision: v1.14.5
     helm:
       values: |
         crds:
-          enabled: true   # install only CRDs
-          keep: true      # do not delete CRDs when this app is pruned (prevents accidental CRD removal)
-        # Disable all other components — only CRDs are managed here
-        # cert-manager controller/webhook/cainjector run separately via cert-manager chart app
-        replicaCount: 0
-        webhook:
-          replicaCount: 0
-        cainjector:
-          replicaCount: 0
-        startupapicheck:
-          enabled: false
+          enabled: true   # install CRDs together with the operator (recommended by cert-manager)
+          keep: true      # do not delete CRDs on prune — prevents losing all issued certs
+        # Full operator deployed: controller + webhook + cainjector
+        # ClusterIssuer and Certificate are managed by the separate cert-manager ArgoCD app (wave 1)
   destination:
     name: in-cluster
     namespace: cert-manager
@@ -36,4 +29,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true   # required for large CRD manifests to avoid annotation size limit
+      - ServerSideApply=true
