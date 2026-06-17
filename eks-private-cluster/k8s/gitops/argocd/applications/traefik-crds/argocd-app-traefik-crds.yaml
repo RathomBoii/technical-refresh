@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0" # ensures that CRDs are installed before the main Traefik Application (sync-wave: "1") is applied
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/traefik/traefik.git
+    targetRevision: v3.0.0
+    path: docs/content/reference/dynamic-configuration
+    directory:
+      include: kubernetes-crd-definition-v1.yml
+  destination:
+    name: in-cluster
+    namespace: traefik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
