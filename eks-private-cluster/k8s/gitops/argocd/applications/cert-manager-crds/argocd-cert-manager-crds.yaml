@@ -30,3 +30,10 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    # ArgoCD's internal schema does not declare .status.terminatingReplicas on Deployments
+    # causing structured merge diff to fail with ComparisonError — safe to ignore
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status/terminatingReplicas
