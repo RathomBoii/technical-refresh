@@ -8,6 +8,12 @@ loadBalancer:
   # subnetIds:
   #   - subnet-xxxxxxxxxxxxxxxxx
   #   - subnet-yyyyyyyyyyyyyyyyy
+  #
+  # ⚠️  IMPORTANT: If NLB stays <pending>, verify AWS Load Balancer Controller
+  # was installed with the correct --set clusterName=<your-cluster-name>.
+  # LBC uses clusterName to match subnet tag: kubernetes.io/cluster/<clusterName>=shared
+  # Mismatch causes: "2 are tagged for other clusters" error.
+  # Fix: helm upgrade aws-load-balancer-controller ... --set clusterName=eks-prod
   subnetIds: 
     - subnet-005aaaeb0ba0989f6
     - subnet-000a1a1f863832af2
