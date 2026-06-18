@@ -37,6 +37,25 @@ spec:
     secret: traefik-dashboard-auth-secret
 ---
 
+# -----------------------------------------------------------------------------
+# MONITORING AUTH
+# Protects Prometheus and Grafana routes with BasicAuth.
+# Uses the same secret as traefik-dashboard-auth-secret for simplicity,
+# or create a separate one:
+#   kubectl create secret generic monitoring-auth-secret \
+#     -n traefik \
+#     --from-literal=users='admin:<htpasswd-bcrypt-hash>'
+# -----------------------------------------------------------------------------
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: monitoring-auth
+  namespace: {{ .Values.namespace }}
+spec:
+  basicAuth:
+    secret: monitoring-auth-secret
+---
+
 
 # -----------------------------------------------------------------------------
 # 2. REDIRECT SCHEME (HTTP → HTTPS)
