@@ -47,17 +47,25 @@ app:
   namespace: prod-app
 
 argocd:
-  serviceName: argocd-server   # default service name from ArgoCD install using official Helm chart
+  serviceName: argocd-server
   namespace: argocd
+  port: 80
+  enabled: true
 
 userApp:
-  serviceName: user-service
+  serviceName: ""
   namespace: userapp
+  port: 3000
+  enabled: false
 
 grafana:
-  serviceName: grafana-service
+  serviceName: prometheus-grafana
   namespace: monitoring
+  port: 80
+  enabled: true
 
 prometheus:
-  serviceName: prometheus-service
+  serviceName: prometheus-kube-prometheus-prometheus
   namespace: monitoring
+  port: 9090
+  enabled: true
