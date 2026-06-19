@@ -53,3 +53,9 @@ eso:
   enabled: false
   clusterSecretStoreName: secret-store  # must match secretStore.name in secret-store chart
   refreshInterval: "1h"
+  dashboardAuth:
+    name: "traefik-dashboard-auth"
+    secretName: traefik-dashboard-auth-secret
+  monitoringAuth:
+    name: "monitoring-auth"
+    secretName: monitoring-auth-secret

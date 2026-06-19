@@ -81,8 +81,8 @@ eso:
   clusterSecretStoreName: secret-store  # must match secretStore.name in secret-store values-prod.yaml
   refreshInterval: "1h"
   dashboardAuth: 
-    name: "traefik-dashboard-auth"
+    name: "traefik-dashboard-auth"     # must match the middleware name referenced in ingressroute.yaml
     secretName: traefik-dashboard-auth-secret
   monitoringAuth: 
-    name: "grafana-monitoring-auth"   
-    secretName: grafana-monitoring-auth-secret
+    name: "monitoring-auth"            # must match the middleware name referenced in ingressroute.yaml
+    secretName: monitoring-auth-secret
