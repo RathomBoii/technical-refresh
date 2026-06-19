@@ -1,3 +1,14 @@
+# EKS: disable scraping of control plane components that are not accessible on managed EKS
+# kube-controller-manager and kube-scheduler run on AWS-managed nodes — not reachable from the data plane
+# kubeControllerManager:
+#   enabled: false
+# kubeScheduler:
+#   enabled: false
+# kubeEtcd:
+#   enabled: false
+# kubeProxy:
+#   enabled: false  # EKS uses iptables rules directly; kube-proxy metrics not exposed
+
 grafana:
   adminPassword: "changeme"  # set a strong password or inject from a Secret in prod
 
