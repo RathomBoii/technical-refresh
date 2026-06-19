@@ -81,8 +81,10 @@ eso:
   clusterSecretStoreName: secret-store  # must match secretStore.name in secret-store values-prod.yaml
   refreshInterval: "1h"
   dashboardAuth: 
+    name: "traefik-dashboard-auth"
     key: "traefik/dashboard-auth"
     secretName: traefik-dashboard-auth-secret
   monitoringAuth: 
+    name: "grafana-monitoring-auth"   
     key: "grafana/monitoring-auth"
     secretName: grafana-monitoring-auth-secret
