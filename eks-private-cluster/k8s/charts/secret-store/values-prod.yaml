@@ -7,7 +7,17 @@ secretStore:
 serviceAccount:
   name: eks-secret-store-irsa
   irsaRoleArn: "arn:aws:iam::687069305167:role/prod-eks-secret-store-irsa"
+  namespace: external-secrets
 
-externalSecret:
-  name: app-secrets   # must match secretName in app values-prod.yaml
-  key: "prod/app"     # AWS Secrets Manager secret name
+appExternalSecret:
+  name: app-secrets      # must match secretName in app values-prod.yaml
+  namespace: prod-app  
+  key: "prod/app"        # AWS Secrets Manager secret name
+
+traefikDashboardAuthExternalSecret:
+  enabled: true
+  key: "prod/traefik-dashboard-auth-secret"   # AWS SM secret name (JSON: {"users": "admin:$hash"})
+
+traefikMonitoringAuthExternalSecret:
+  enabled: true
+  key: "prod/traefik-monitoring-auth-secret"  # AWS SM secret name (JSON: {"users": "admin:$hash"})

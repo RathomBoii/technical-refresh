@@ -9,6 +9,17 @@ serviceAccount:
   name: eks-secret-store-irsa  # ServiceAccount name referenced by the SecretStore
   irsaRoleArn: "arn:aws:iam::687069305167:role/prod-eks-secret-store-irsa"              # IAM role ARN for IRSA — must be set per environment
 
-externalSecret:
+appExternalSecret:
   name: app-secrets      # Name of the k8s Secret to create — must match secretName in app deployment values
-  key: "prod/app"                       # AWS Secrets Manager secret name to fetch — must be set per environment (e.g. prod/app)
+  namespace: default     # Namespace where the k8s Secret will be created — must match the namespace of the consuming resources
+  key: "prod/app"        # AWS Secrets Manager secret name to fetch — must be set per environment (e.g. prod/app)
+
+# Traefik middleware auth secrets — deployed to the traefik namespace by this chart.
+# Set enabled: true in environment values once AWS SM secrets are created.
+traefikDashboardAuthExternalSecret:
+  enabled: false
+  key: "traefik/dashboard-auth"   # AWS SM secret name; JSON value: {"users": "admin:$htpasswd-hash"}
+
+traefikMonitoringAuthExternalSecret:
+  enabled: false
+  key: "traefik/monitoring-auth"  # AWS SM secret name; JSON value: {"users": "admin:$htpasswd-hash"}
