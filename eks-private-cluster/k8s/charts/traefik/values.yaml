@@ -53,9 +53,3 @@ eso:
   enabled: false
   clusterSecretStoreName: secret-store  # must match secretStore.name in secret-store chart
   refreshInterval: "1h"
-  dashboardAuth: 
-    key: "traefik/dashboard-auth"   # AWS SM secret name (JSON: {"users": "admin:$hash"})
-    secretName: traefik-dashboard-auth-secret
-  monitoringAuth: 
-    key: "traefik/monitoring-auth" # AWS SM secret name (JSON: {"users": "admin:$hash"})
-    secretName: traefik-monitoring-auth-secret
