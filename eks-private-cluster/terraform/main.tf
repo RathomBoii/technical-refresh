@@ -43,14 +43,16 @@ module "eks" {
 }
 
 module "bastion" {
-  source            = "./modules/bastion"
-  env               = var.env
-  vpc_id            = module.vpc.vpc_id
-  private_subnet_id = module.vpc.private_subnet_ids[0]
-  cluster_name      = var.cluster_name
-  region            = var.region
-  instance_type     = var.bastion_instance_type
-  tfstate_bucket    = var.tfstate_bucket
+  source                       = "./modules/bastion"
+  env                          = var.env
+  vpc_id                       = module.vpc.vpc_id
+  vpc_cidr                     = module.vpc.vpc_cidr
+  private_subnet_id            = module.vpc.private_subnet_ids[0]
+  cluster_name                 = var.cluster_name
+  region                       = var.region
+  instance_type                = var.bastion_instance_type
+  tfstate_bucket               = var.tfstate_bucket
+  eks_cluster_security_group_id = module.eks.cluster_security_group_id
 }
 
 module "ecr" {
