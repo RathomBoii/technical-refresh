@@ -27,13 +27,12 @@ spec:
             - name: APP_ENV
               value: {{ .Values.env | quote }}
           {{- if .Values.secrets.enabled }}
-          {{- range .Values.secrets.envVars }}
-            - name: {{ .name }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .secretName }}
-                  key: {{ .key }}
-          {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.secretName }}
+                # All keys from this K8s Secret become env vars automatically:
+                # API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+                # ESO syncs these from AWS Secrets Manager (prod/app)
           {{- end }}
           resources:
             requests:
