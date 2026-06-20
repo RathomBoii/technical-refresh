@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: app
+  name: app # When releaseName is not set, ArgoCD uses the Application metadata.name as the Helm release name.
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io/foreground # ensures that all resources are deleted when the Application is deleted

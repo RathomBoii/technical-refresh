@@ -10,8 +10,9 @@ serviceAccount:
   roleArn: "arn:aws:iam::687069305167:role/prod-app"  # Set in values-dev/prod.yaml — IAM role ARN from terraform output
 
 secrets:
-  enabled: false          # Set true once IRSA role + SecretProviderClass exist
-  envVars: []             # List of {name, secretName, key} for env vars from K8s Secret
+  enabled: false          # Set true once app-secrets K8s Secret exists (synced by ESO)
+  secretName: app-secrets # Name of the K8s Secret — all keys become env vars via envFrom
+                          # Expected keys: API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
   # Example:
   # envVars:
   #   - name: API_KEY
@@ -28,3 +29,10 @@ resources:
   limits:
     cpu: "250m"
     memory: "256Mi"
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
