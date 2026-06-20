@@ -1,45 +1,43 @@
-import os
-from fastapi import FastAPI, Query, Request
+from contextlib import asynccontextmanager
+from typing import Any
 
-app = FastAPI()
+from fastapi import FastAPI
 
-# Injected by Kubernetes via secretKeyRef (synced from AWS Secrets Manager
-# by the CSI Secrets Store driver). Falls back to None if not set.
-API_KEY = os.environ.get("API_KEY")
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Hello from Kubernetes"}
+from service.controller import health_controller, oil_price_controller, user_controller
+from service.repository.connection import close_pool, get_pool, init_pool
+from service.repository.postgres_oil_price_repository import PostgresOilPriceRepository
 
 
-@app.get("/health")
-def read_health():
-    return {"message": "Service is healthy"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: initialise DB pool, create schema, seed initial data
+    init_pool()
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        repo = PostgresOilPriceRepository(conn)
+        repo.init_schema()
+        repo.seed_prices()
+    finally:
+        pool.putconn(conn)
+
+    yield
+
+    # Shutdown: drain the pool
+    close_pool()
 
 
-@app.get("/secret-check")
-def secret_check():
-    """Returns whether the API key is loaded — never expose the actual value."""
-    return {"api_key_loaded": API_KEY is not None}
+app = FastAPI(
+    title="Oil Price Dashboard",
+    version="2.0.0",
+    description="World oil pricing dashboard with user management — verifies EKS→RDS private connectivity.",
+    lifespan=lifespan,
+)
 
-@app.get("/secret-value")
-def secret_value(request: Request, key: str = Query(..., description="Env var name to look up, e.g. API_KEY")):
-    """Returns the actual env var value — for testing only, not for production.
-    
-    Usage: /secret-value?key=API_KEY
+app.include_router(health_controller.router)
+app.include_router(user_controller.router)
+app.include_router(oil_price_controller.router)
 
-    !Important: this is for demonstration purposes only. Never expose secret values in production!
-    """
-    value = os.environ.get(key)
-    client_ip = request.client.host
-
-    if value is not None:
-        return {"client_ip": client_ip, "key": key, "value": value}
-    else:
-        return {"client_ip": client_ip, "error": f"'{key}' not found in environment variables"}
-
-    
 
 
 

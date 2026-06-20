@@ -1,11 +1,11 @@
-# todo: revise to align with this guide: https://testdriven.io/blog/docker-best-practices/
-FROM python:3.14.5-slim
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 COPY requirements.txt .
-
-#  --no-cache-dir: Avoids caching the package index and installed packages, which can save space in the Docker image.
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
