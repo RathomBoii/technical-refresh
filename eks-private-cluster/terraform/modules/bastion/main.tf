@@ -122,12 +122,7 @@ resource "aws_security_group" "bastion" {
   description = "Bastion host security group"
   vpc_id      = var.vpc_id
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # No broad egress — outbound rules defined explicitly below via aws_security_group_rule
 
   tags = {
     Name      = "${var.env}-bastion-sg"
@@ -136,7 +131,64 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-# Rules added after both SGs exist — breaks circular dependency
+# ── Bastion egress rules (least-privilege) ────────────────────────────────────
+
+# kubectl / EKS API — bastion → control plane ENIs on port 443
+resource "aws_security_group_rule" "bastion_egress_eks_api" {
+  type                     = "egress"
+  description              = "kubectl to EKS control plane"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.bastion.id
+  source_security_group_id = var.eks_cluster_security_group_id
+}
+
+# AWS VPC endpoints (ECR, STS, Secrets Manager, S3 Gateway) — all on 443 inside the VPC
+resource "aws_security_group_rule" "bastion_egress_vpc_endpoints" {
+  type              = "egress"
+  description       = "HTTPS to VPC endpoints (ECR, STS, Secrets Manager, S3)"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.bastion.id
+  cidr_blocks       = [var.vpc_cidr]
+}
+
+# Internet HTTPS via NAT — user_data downloads (kubectl, helm, gh, terraform, argocd)
+resource "aws_security_group_rule" "bastion_egress_https" {
+  type              = "egress"
+  description       = "HTTPS to internet via NAT (package downloads)"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.bastion.id
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+# Internet HTTP via NAT — Helm repo metadata, dnf package index
+resource "aws_security_group_rule" "bastion_egress_http" {
+  type              = "egress"
+  description       = "HTTP to internet via NAT (Helm/dnf repo metadata)"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  security_group_id = aws_security_group.bastion.id
+  cidr_blocks       = ["0.0.0.0/0"]
+}
+
+# DNS — resolves AWS service endpoints and EKS cluster endpoint
+resource "aws_security_group_rule" "bastion_egress_dns" {
+  type              = "egress"
+  description       = "DNS resolution"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "udp"
+  security_group_id = aws_security_group.bastion.id
+  cidr_blocks       = [var.vpc_cidr]
+}
+
+# ── EIC / bastion rules — breaks circular dependency ──────────────────────────
 resource "aws_security_group_rule" "eic_egress_ssh" {
   type                     = "egress"
   description              = "SSH to bastion"

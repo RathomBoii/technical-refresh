@@ -17,3 +17,11 @@ variable "kubernetes_version" {
   default = "1.35" 
   description = "Kubernetes version for the EKS cluster"
 }
+variable "eks_cluster_security_group_id" {
+  type        = string
+  description = "EKS cluster security group ID — used to allow bastion egress to EKS API on port 443"
+}
+variable "vpc_cidr" {
+  type        = string
+  description = "VPC CIDR block — used to scope bastion egress to VPC endpoints"
+}
