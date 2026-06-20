@@ -2,14 +2,13 @@
 replicaCount: 1
 image:
   repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-app"
-  tag: "v.2.19"
+  tag: "v.2.20"
 env: "prod"
 namespace: "prod-app"
 secrets:
   enabled: true
-  secretName: app-secrets  # K8s Secret synced by ESO from AWS SM secret "prod/app"
-                            # Must contain: API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-
+  secretName: app-secrets # K8s Secret synced by ESO from AWS SM secret "prod/app"
+  # Must contain: API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 hpa:
   enabled: true
   minReplicas: 1
