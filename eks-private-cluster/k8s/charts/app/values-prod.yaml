@@ -2,7 +2,7 @@
 replicaCount: 1
 image:
   repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-app"
-  tag: "v.2.20"
+  tag: "v.2.21"
 env: "prod"
 namespace: "prod-app"
 secrets:
@@ -15,7 +15,6 @@ hpa:
   maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
-
 otel:
   # Tempo OTLP gRPC endpoint — deployed in monitoring namespace
   endpoint: "tempo.monitoring.svc.cluster.local:4317"
