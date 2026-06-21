@@ -1,0 +1,84 @@
+{{- if .Values.alerting.enabled }}
+# PrometheusRule defines symptom-based alerting rules for the Oil Price Dashboard.
+# These fire on user-visible symptoms (high error rate, slow responses) rather than
+# low-level causes (CPU spikes), which is the Google SRE best practice.
+#
+# Rules use metrics provided by prometheus-fastapi-instrumentator:
+#   http_requests_total{status}  — request counter
+#   http_request_duration_seconds — latency histogram
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-alerts
+  namespace: {{ .Values.namespace | default "prod-app" }}
+  labels:
+    # Must match the Prometheus operator's ruleSelector — same as ServiceMonitor above.
+    release: {{ .Values.metrics.prometheusRelease | default "prometheus" }}
+spec:
+  groups:
+    - name: app.golden_signals
+      interval: 30s
+      rules:
+
+        # ── Traffic ───────────────────────────────────────────────────────────
+        # Not an alert, but a recording rule used in dashboards and other alerts.
+        - record: job:http_requests_total:rate5m
+          expr: sum(rate(http_requests_total{job="{{ .Release.Name }}-svc"}[5m]))
+
+        # ── Errors ────────────────────────────────────────────────────────────
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="{{ .Release.Name }}-svc", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="{{ .Release.Name }}-svc"}[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            service: {{ .Release.Name }}
+          annotations:
+            summary: "High HTTP 5xx error rate on {{ .Release.Name }}"
+            description: "More than 5% of requests are returning 5xx. Current rate: {{ "{{" }} $value | humanizePercentage {{ "}}" }}."
+
+        # ── Latency ───────────────────────────────────────────────────────────
+        - alert: HighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{job="{{ .Release.Name }}-svc"}[5m])
+              )
+            ) > 0.3
+          for: 10m
+          labels:
+            severity: warning
+            service: {{ .Release.Name }}
+          annotations:
+            summary: "High p95 request latency on {{ .Release.Name }}"
+            description: "95th percentile latency is {{ "{{" }} $value | humanizeDuration {{ "}}" }}, above the 300ms SLO threshold."
+
+        # ── Saturation ────────────────────────────────────────────────────────
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{
+              namespace="{{ .Values.namespace | default "prod-app" }}",
+              pod=~"{{ .Release.Name }}-.*"
+            }[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+            service: {{ .Release.Name }}
+          annotations:
+            summary: "Pod crash-looping: {{ "{{" }} $labels.pod {{ "}}" }}"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} has restarted {{ "{{" }} $value {{ "}}" }} times in the last 15 minutes."
+
+        # ── Target availability ───────────────────────────────────────────────
+        - alert: AppMetricsTargetDown
+          expr: |
+            up{job="{{ .Release.Name }}-svc"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            service: {{ .Release.Name }}
+          annotations:
+            summary: "Prometheus cannot scrape {{ .Release.Name }}"
+            description: "The /metrics endpoint for {{ .Release.Name }} has been unreachable for 5 minutes. App may be down."
+{{- end }}

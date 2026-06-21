@@ -1,0 +1,26 @@
+{{- if .Values.metrics.enabled }}
+# ServiceMonitor tells the Prometheus operator where to scrape this app's /metrics endpoint.
+# The `release` label must match the Helm release name of kube-prometheus-stack
+# so the operator's label selector picks it up automatically.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Values.namespace | default "prod-app" }}
+  labels:
+    # This label is how the Prometheus operator discovers ServiceMonitors.
+    # Must match: prometheusSpec.serviceMonitorSelector.matchLabels.release in kube-prometheus-stack values.
+    release: {{ .Values.metrics.prometheusRelease | default "prometheus" }}
+spec:
+  selector:
+    matchLabels:
+      app: app  # matches the Service's selector label
+  endpoints:
+    - port: http        # matches the named port in service.yaml
+      path: /metrics    # exposed by prometheus-fastapi-instrumentator
+      interval: 30s     # how often Prometheus scrapes — 30s is standard
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace | default "prod-app" }}
+{{- end }}

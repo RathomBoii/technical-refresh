@@ -1,0 +1,41 @@
+# ── ArgoCD Application: Loki Stack ────────────────────────────────────────────
+# Deploys Loki (log aggregation) + Promtail (log shipper) into the monitoring namespace.
+# Promtail runs as a DaemonSet — it tails all pod stdout/stderr logs and ships them to Loki.
+# Grafana queries Loki for log search and trace↔log correlation via trace_id in JSON logs.
+#
+# Apply: kubectl apply -f argocd-app-loki.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+spec:
+  project: default
+
+  sources:
+    # Source 1: grafana/loki-stack upstream chart (Loki + Promtail bundled)
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki-stack
+      targetRevision: "2.10.2"   # pin for reproducibility — upgrade by bumping this
+      helm:
+        valueFiles:
+          - $values/eks-private-cluster/k8s/values/loki/values-prod.yaml
+
+    # Source 2: this Git repo — provides the values file via $values reference
+    - repoURL: https://github.com/RathomBoii/technical-refresh.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring   # same namespace as Grafana so service DNS is just "loki:3100"
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

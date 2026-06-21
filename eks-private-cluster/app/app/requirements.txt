@@ -2,3 +2,16 @@ fastapi
 uvicorn
 psycopg2-binary
 email-validator
+
+# Phase 1 — Metrics: exposes /metrics endpoint for Prometheus scraping
+prometheus-fastapi-instrumentator
+
+# Phase 3 — Tracing: OpenTelemetry SDK + FastAPI/psycopg2 auto-instrumentation + OTLP gRPC export
+opentelemetry-sdk
+opentelemetry-api
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-psycopg2
+
+# Phase 4 — Logging: structured JSON logs with trace_id injection
+python-json-logger

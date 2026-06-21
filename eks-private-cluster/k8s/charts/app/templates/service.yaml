@@ -6,7 +6,8 @@ spec:
   selector:
     app: app
   ports:
-    - port: {{ .Values.service.port }} # port of this service
+    - name: http                          # named port — required by ServiceMonitor
+      port: {{ .Values.service.port }}    # port of this service
       targetPort: {{ .Values.service.port }} # port on the Pod to forward to
       protocol: TCP
   type: {{ .Values.service.type }}

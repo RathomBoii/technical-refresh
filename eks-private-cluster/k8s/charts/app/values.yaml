@@ -36,3 +36,20 @@ hpa:
   maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
+
+# ── Phase 1: Prometheus metrics scraping ────────────────────────────────────
+metrics:
+  enabled: true
+  # Must match the Helm release name of kube-prometheus-stack so the Prometheus
+  # operator discovers this ServiceMonitor via label selector.
+  prometheusRelease: prometheus
+
+# ── Phase 3: OpenTelemetry tracing ──────────────────────────────────────────
+otel:
+  # gRPC endpoint for Tempo (host:port, no scheme).
+  # Set to "" to disable export (safe for local dev without Tempo running).
+  endpoint: ""
+
+# ── Phase 5: Symptom-based alerting rules ───────────────────────────────────
+alerting:
+  enabled: true
