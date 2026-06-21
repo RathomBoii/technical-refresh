@@ -36,4 +36,5 @@ resources:
 
 persistence:
   enabled: true
+  storageClassName: gp2   # EBS CSI driver is active — gp2 is the default EKS StorageClass
   size: 5Gi
