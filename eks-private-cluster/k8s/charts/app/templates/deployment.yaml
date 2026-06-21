@@ -27,12 +27,22 @@ spec:
             - name: APP_ENV
               value: {{ .Values.env | quote }}
           {{- if .Values.secrets.enabled }}
+          # OPTION 1 (current): envFrom — injects all secret keys as env vars at pod start.
+          # Simple, works with os.environ. Requires rollout restart after secret rotation and also secret replacement (e.g. kubectl delete secret <secret-name>) in order to trigger the ESO sync and update the env vars in the pod.
           envFrom:
             - secretRef:
                 name: {{ .Values.secrets.secretName }}
                 # All keys from this K8s Secret become env vars automatically:
                 # API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
                 # ESO syncs these from AWS Secrets Manager (prod/app)
+          # OPTION 2 (commented): Volume mount — mounts each secret key as a file under /etc/secrets/.
+          # K8s auto-refreshes file contents ~1 min after Secret update (no pod restart needed).
+          # Trade-off: app must read files via pathlib.Path("/etc/secrets/<KEY>").read_text()
+          #            instead of os.environ.get("<KEY>"). os.environ will NOT reflect updates.
+          # volumeMounts:
+          #   - name: app-secrets
+          #     mountPath: /etc/secrets
+          #     readOnly: true
           {{- end }}
           resources:
             requests:
@@ -53,3 +63,12 @@ spec:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
+      # OPTION 2 (commented): volumes block — required when using volumeMounts above.
+      # Pair this with the volumeMounts section in the container spec.
+      # volumes:
+      #   - name: app-secrets
+      #     secret:
+      #       secretName: {{ .Values.secrets.secretName }}
+      #       # Each key in the K8s Secret becomes a separate file:
+      #       #   /etc/secrets/API_KEY, /etc/secrets/DB_HOST, /etc/secrets/DB_PORT, etc.
+      #       # K8s kubelet refreshes these files automatically when the Secret changes.
