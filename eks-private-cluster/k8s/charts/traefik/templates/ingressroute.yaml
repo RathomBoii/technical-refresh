@@ -13,6 +13,18 @@ spec:
         - name: {{ .Values.app.serviceName }}
           namespace: {{ .Values.app.namespace }}
           port: 8000
+
+    # For app metrics path
+    - match: "Host(`{{ .Values.domains.app }}`) && PathPrefix(`/metrics`)"
+      kind: Rule
+      middlewares:
+        - name: traefik-monitoring-auth  # BasicAuth — create secret: kubectl create secret generic metrics-auth-secret -n traefik --from-literal=users='admin:<htpasswd-hash>'
+      services:
+        - name: {{ .Values.app.serviceName }}
+          namespace: {{ .Values.app.namespace }}
+          port: 8000
+
+
     {{- if .Values.userApp.enabled }}
     - match: "Host(`{{ .Values.domains.userApp }}`)"
       kind: Rule
