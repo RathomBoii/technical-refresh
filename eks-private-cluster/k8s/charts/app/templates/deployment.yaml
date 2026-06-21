@@ -26,6 +26,10 @@ spec:
           env:
             - name: APP_ENV
               value: {{ .Values.env | quote }}
+            {{- if .Values.otel.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            {{- end }}
           {{- if .Values.secrets.enabled }}
           # OPTION 1 (current): envFrom — injects all secret keys as env vars at pod start.
           # Simple, works with os.environ. Requires rollout restart after secret rotation and also secret replacement (e.g. kubectl delete secret <secret-name>) in order to trigger the ESO sync and update the env vars in the pod.

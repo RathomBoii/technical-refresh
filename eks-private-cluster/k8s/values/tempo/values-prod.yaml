@@ -1,0 +1,39 @@
+# Tempo values — production overrides
+# Chart: grafana/tempo  (single-binary mode, suitable for learning and small clusters)
+#
+# Tempo receives OTLP gRPC traces from the app on port 4317
+# and serves trace queries to Grafana on port 3100.
+tempo:
+  reportingEnabled: false  # disable Grafana telemetry reporting
+
+  storage:
+    trace:
+      backend: local      # simple local disk storage — swap for s3 in real prod
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:              # app sends OTLP gRPC on port 4317
+          endpoint: "0.0.0.0:4317"
+        http:              # optional HTTP fallback on port 4318
+          endpoint: "0.0.0.0:4318"
+
+  # Expose the query API for Grafana (port 3100)
+  server:
+    http_listen_port: 3100
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  size: 5Gi

@@ -1,0 +1,40 @@
+# Loki Stack values — production overrides
+# Chart: grafana/loki-stack  (bundles Loki + Promtail — Promtail ships pod stdout to Loki)
+#
+# Promtail runs as a DaemonSet, tails /var/log/pods/**/*.log on every node,
+# and pushes structured logs (including trace_id from JSON logs) to Loki.
+# Grafana queries Loki on port 3100 for log search and trace↔log correlation.
+
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+  config:
+    auth_enabled: false   # single-tenant, no authentication needed in-cluster
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+promtail:
+  enabled: true           # DaemonSet that tails pod logs and ships to Loki
+  config:
+    logLevel: info
+    serverPort: 3101
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Disable bundled Grafana — we already have Grafana from kube-prometheus-stack
+grafana:
+  enabled: false

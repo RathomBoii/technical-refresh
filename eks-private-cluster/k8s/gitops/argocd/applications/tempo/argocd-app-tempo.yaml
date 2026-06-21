@@ -1,0 +1,40 @@
+# ── ArgoCD Application: Tempo ─────────────────────────────────────────────────
+# Deploys Grafana Tempo (distributed trace backend) into the monitoring namespace.
+# The app sends OTLP gRPC traces to tempo:4317 → Tempo stores them → Grafana queries port 3100.
+#
+# Apply: kubectl apply -f argocd-app-tempo.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+spec:
+  project: default
+
+  sources:
+    # Source 1: grafana/tempo upstream chart
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: tempo
+      targetRevision: "1.10.3"   # pin for reproducibility — upgrade by bumping this
+      helm:
+        valueFiles:
+          - $values/eks-private-cluster/k8s/values/tempo/values-prod.yaml
+
+    # Source 2: this Git repo — provides the values file via $values reference
+    - repoURL: https://github.com/RathomBoii/technical-refresh.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring   # same namespace as kube-prometheus-stack + Grafana
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

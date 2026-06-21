@@ -23,6 +23,51 @@ grafana:
       cpu: 1000m
       memory: 1Gi
 
+  # ── Observability datasources: Tempo (traces) + Loki (logs) ───────────────
+  # These are auto-provisioned so Grafana has them on first boot.
+  # Both services are in the same `monitoring` namespace as Grafana,
+  # so short DNS names (tempo:3100, loki:3100) resolve correctly.
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      access: proxy
+      url: http://tempo:3100
+      uid: tempo
+      jsonData:
+        # Trace → Logs: click a span in Tempo → jump to Loki logs for that trace_id
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-1h"
+          spanEndTimeShift: "1h"
+          filterByTraceID: true
+          filterBySpanID: false
+          customQuery: true
+          query: '{job=~".+"} | json | trace_id=~"${__trace.traceId}"'
+        # Trace → Metrics: link from Tempo spans to Prometheus metric explorer
+        tracesToMetrics:
+          datasourceUid: prometheus
+        # Service graph: visualise request topology from span data
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
+        # Enable log search from within Tempo UI
+        lokiSearch:
+          datasourceUid: loki
+
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki:3100
+      uid: loki
+      jsonData:
+        # Logs → Traces: if a log line contains trace_id, show a link to Tempo
+        derivedFields:
+          - datasourceUid: tempo
+            matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+            name: TraceID
+            url: "${__value.raw}"   # Grafana substitutes the captured trace_id
+
 prometheus:
   prometheusSpec:
     retention: 30d  # longer retention in prod for incident investigation
