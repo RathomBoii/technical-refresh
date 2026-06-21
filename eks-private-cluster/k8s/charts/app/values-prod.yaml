@@ -2,7 +2,7 @@
 replicaCount: 1
 image:
   repository: "687069305167.dkr.ecr.ap-southeast-7.amazonaws.com/prod-app"
-  tag: "v.2.21"
+  tag: "v.2.22"
 env: "prod"
 namespace: "prod-app"
 secrets:
