@@ -9,7 +9,7 @@ psycopg2-binary
 email-validator
 
 # Phase 1 — Metrics: exposes /metrics endpoint for Prometheus scraping
-prometheus-fastapi-instrumentator==7.1.0
+prometheus-fastapi-instrumentator==8.0.0
 
 # Phase 3 — Tracing: OpenTelemetry SDK + FastAPI/psycopg2 auto-instrumentation + OTLP gRPC export
 opentelemetry-sdk
