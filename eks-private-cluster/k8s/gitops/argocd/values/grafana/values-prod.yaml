@@ -1,0 +1,110 @@
+# ── Grafana: standalone chart values (prod) ───────────────────────────────────
+# Used by: eks-private-cluster/k8s/gitops/argocd/applications/grafana/argocd-grafana.yaml
+# Chart:   grafana/grafana  v12.7.0
+#
+# ── How this file works ───────────────────────────────────────────────────────
+# The Grafana Helm chart ships a full default values.yaml (1833 lines) that
+# contains every possible configuration key with its default value.
+# Source (authoritative): https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+#
+# This file is an OVERRIDE file — you only need to declare the keys you want
+# to change from the defaults. Helm deep-merges the two at deploy time:
+#
+#   Chart default values.yaml  (base — every key, mostly disabled/empty)
+#            +
+#   This values-prod.yaml      (overrides — only what we explicitly set)
+#            =
+#   Final rendered Kubernetes manifests
+#
+# Example: the chart default for persistence.enabled is `false` and size is
+# `10Gi`. By writing `enabled: true` and `size: 5Gi` below, only those two
+# keys are overridden — everything else in persistence: stays at the default.
+#
+# To find available keys: browse the default values.yaml linked above.
+# Every key documented there can be overridden here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Admin credentials ─────────────────────────────────────────────────────────
+adminUser: admin
+adminPassword: "changeme"  # replace with a strong password or inject from an ExternalSecret
+
+# ── Resource limits ───────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# ── Persistent storage ────────────────────────────────────────────────────────
+# Stores dashboards, alerting state, and plugin data across restarts.
+persistence:
+  enabled: true
+  type: pvc
+  size: 5Gi
+  accessModes:
+    - ReadWriteOnce
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false  # ingress managed by Traefik IngressRoute
+
+# ── Datasources auto-provisioned on first boot ────────────────────────────────
+# All three backends run in the same `monitoring` namespace so short DNS names resolve.
+# Prometheus  → prometheus-operated:9090  (created by Prometheus Operator)
+# Loki        → loki:3100
+# Tempo       → tempo:3100
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # ── Prometheus (default metrics datasource) ────────────────────────────
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://prometheus-operated.monitoring.svc:9090
+        isDefault: true   # used as the default datasource in dashboards
+
+      # ── Tempo (distributed tracing) ───────────────────────────────────────
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc:3100
+        jsonData:
+          # Trace → Logs: click a span in Tempo → jump to Loki logs for that trace_id
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-1h"
+            spanEndTimeShift: "1h"
+            filterByTraceID: true
+            filterBySpanID: false
+            customQuery: true
+            query: '{job=~".+"} | json | trace_id=~"${__trace.traceId}"'
+          # Trace → Metrics: link from Tempo spans to Prometheus metric explorer
+          tracesToMetrics:
+            datasourceUid: prometheus
+          # Service graph: visualise request topology from span data
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          # Enable log search from within Tempo UI
+          lokiSearch:
+            datasourceUid: loki
+
+      # ── Loki (log aggregation) ────────────────────────────────────────────
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.monitoring.svc:3100
+        jsonData:
+          # Logs → Traces: if a log line contains trace_id, show a link to Tempo
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+              name: TraceID
+              url: "${__value.raw}"   # Grafana substitutes the captured trace_id

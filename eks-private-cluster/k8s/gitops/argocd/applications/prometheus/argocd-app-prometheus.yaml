@@ -26,7 +26,7 @@ spec:
       targetRevision: "72.3.0"  # pin chart version — upgrade by changing this value
       helm:
         valueFiles:
-          - $values/eks-private-cluster/k8s/values/prometheus/values-prod.yaml
+          - $values/eks-private-cluster/k8s/gitops/argocd/values/prometheus/values-prod.yaml
 
     # Source 2: this Git repo — only used to provide the values file via $values reference above
     - repoURL: https://github.com/RathomBoii/technical-refresh.git

@@ -1,0 +1,88 @@
+# default value file from Helm Chart = https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
+#
+# This file is an override file — only keys that differ from chart defaults are
+# declared here. Helm deep-merges this with the chart's full default values.yaml.
+#
+# Goal: install ONLY Prometheus + the Prometheus Operator (required to manage
+# the Prometheus CRD). Everything else bundled in kube-prometheus-stack is
+# disabled here because each component is either deployed separately or not
+# needed at this stage:
+#
+#   Grafana      → separate ArgoCD app  (argocd/applications/grafana/)
+#   Loki         → separate ArgoCD app  (argocd/applications/loki/)
+#   Tempo        → separate ArgoCD app  (argocd/applications/tempo/)
+#   Alertmanager → not needed yet
+#   node-exporter        → not needed yet (change to "true" when node metrics required)
+#   kube-state-metrics   → not needed yet (change to "true" when k8s object metrics required)
+#   EKS control plane    → not accessible from data plane on managed EKS
+
+# ── Components disabled — not part of this install ───────────────────────────
+grafana:
+  enabled: false  # deployed separately via grafana/grafana chart
+
+alertmanager:
+  enabled: true  # not needed at this stage
+
+nodeExporter:
+  enabled: true  # prometheus-node-exporter subchart — change to "true" when node metrics needed
+
+kubeStateMetrics:
+  enabled: true  # kube-state-metrics subchart — change to "true" when k8s object metrics needed
+
+# ── EKS: control plane components not reachable from data plane ──────────────
+# These run on AWS-managed nodes and do not expose metrics endpoints to pods.
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeEtcd:
+  enabled: true
+kubeProxy:
+  enabled: true  # EKS uses iptables rules directly; kube-proxy metrics not exposed
+
+# ── Prometheus Operator — keep enabled (required) ────────────────────────────
+# The operator watches for Prometheus CRs and creates the StatefulSet.
+# Disabling this would mean Prometheus itself never gets deployed.
+prometheusOperator:
+  enabled: true
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    retention: 30d  # longer retention in prod for incident investigation
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+    # ── Persistent storage ──────────────────────────────────────────────────
+    # storageSpec adds a volumeClaimTemplate to the Prometheus StatefulSet.
+    # The Prometheus Operator creates one PVC per replica automatically.
+    #
+    # How it works:
+    #   1. The Operator reads this storageSpec from the Prometheus CR.
+    #   2. It injects a volumeClaimTemplate into the StatefulSet spec.
+    #   3. Kubernetes provisions an EBS volume (via the storageClassName) and
+    #      binds it to the pod on scheduling.
+    #   4. TSDB data written to /prometheus is persisted on that EBS volume
+    #      and survives pod restarts and rescheduling.
+    #
+    # Without storageSpec: Prometheus uses emptyDir (ephemeral) — all metrics
+    # data is lost on every pod restart.
+    #
+    # storageClassName options on EKS:
+    #   gp2  → older default, EBS General Purpose SSD (AWS default StorageClass)
+    #   gp3  → newer, better performance/cost — create a StorageClass for it first
+    #   ""   → use the cluster's default StorageClass
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp2   # EBS StorageClass — change to gp3 if available
+          accessModes:
+            - ReadWriteOnce       # EBS volumes only support single-node attachment
+          resources:
+            requests:
+              storage: 50Gi       # size of the EBS volume per Prometheus replica

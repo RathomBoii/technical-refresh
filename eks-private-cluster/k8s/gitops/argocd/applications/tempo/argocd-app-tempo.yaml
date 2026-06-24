@@ -21,7 +21,7 @@ spec:
       targetRevision: "1.10.3"   # pin for reproducibility — upgrade by bumping this
       helm:
         valueFiles:
-          - $values/eks-private-cluster/k8s/values/tempo/values-prod.yaml
+          - $values/eks-private-cluster/k8s/gitops/argocd/values/tempo/values-prod.yaml
 
     # Source 2: this Git repo — provides the values file via $values reference
     - repoURL: https://github.com/RathomBoii/technical-refresh.git
