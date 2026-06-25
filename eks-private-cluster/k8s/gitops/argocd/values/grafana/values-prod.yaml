@@ -25,8 +25,54 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Admin credentials ─────────────────────────────────────────────────────────
-adminUser: admin
-adminPassword: "changeme"  # replace with a strong password or inject from an ExternalSecret
+# Option A (current): plaintext — fine for local dev, not for prod
+# adminUser: admin
+# adminPassword: "changeme"
+#
+# Option B (recommended for prod): reference a pre-existing Kubernetes Secret.
+# The chart injects the secret value as the GF_SECURITY_ADMIN_PASSWORD env var.
+#
+# Step 1 — store the password in AWS Secrets Manager:
+#   aws secretsmanager create-secret \
+#     --name prod/grafana/admin \
+#     --secret-string '{"username":"admin","password":"<strong-password>"}'
+#
+# Step 2 — create an ExternalSecret CR to sync it into a Kubernetes Secret:
+#   (place this in eks-private-cluster/k8s/gitops/argocd/values/grafana/external-secret.yaml)
+#
+#   apiVersion: external-secrets.io/v1beta1
+#   kind: ExternalSecret
+#   metadata:
+#     name: grafana-admin-secret
+#     namespace: monitoring
+#   spec:
+#     refreshInterval: 1h
+#     secretStoreRef:
+#       name: aws-secrets-manager      # your ClusterSecretStore name
+#       kind: ClusterSecretStore
+#     target:
+#       name: grafana-admin-secret     # Kubernetes Secret name created below
+#       creationPolicy: Owner
+#     data:
+#       - secretKey: admin-user        # key inside the K8s Secret
+#         remoteRef:
+#           key: prod/grafana/admin    # AWS Secrets Manager secret name
+#           property: username
+#       - secretKey: admin-password
+#         remoteRef:
+#           key: prod/grafana/admin
+#           property: password
+#
+# Step 3 — reference the Kubernetes Secret here (Option B below):
+# Option A (current): plaintext — fine for local dev, not for prod
+# adminUser: admin
+# adminPassword: "changeme"  # ← swap to Option B for prod
+
+# *Option B (uncomment when ExternalSecret is in place, remove the two lines above):
+admin:
+  existingSecret: grafana-admin-secret  # name of the K8s Secret created by ExternalSecret
+  userKey: admin-user                   # key inside the Secret for the username
+  passwordKey: admin-password           # key inside the Secret for the password
 
 # ── Resource limits ───────────────────────────────────────────────────────────
 resources:
