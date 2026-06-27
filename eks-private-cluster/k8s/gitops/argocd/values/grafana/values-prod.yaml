@@ -71,8 +71,8 @@
 # *Option B (uncomment when ExternalSecret is in place, remove the two lines above):
 admin:
   existingSecret: grafana-credentials  # name of the K8s Secret created by ExternalSecret
-  userKey: admin_user        l          # key inside the Secret for the username
-  passwordKey: admin_password           # key inside the Secret for the password
+  userKey: admin_user                  # key inside the Secret for the username
+  passwordKey: admin_password          # key inside the Secret for the password
 
 # ── Resource limits ───────────────────────────────────────────────────────────
 resources:
