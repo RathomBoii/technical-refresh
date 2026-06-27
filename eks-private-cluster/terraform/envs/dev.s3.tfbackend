@@ -1,3 +1,3 @@
-bucket = "[your_precreate_s3_bucket]"
+bucket = "eks-app-jessada-demo"
 key    = "state/dev"
-region = "[s3_region]"
+region = "ap-southeast-7"

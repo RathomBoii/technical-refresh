@@ -1,0 +1,217 @@
+# ── Grafana: standalone chart values (prod) ───────────────────────────────────
+# Used by: eks-private-cluster/k8s/gitops/argocd/applications/grafana/argocd-grafana.yaml
+# Chart:   grafana/grafana  v12.7.0
+#
+# ── How this file works ───────────────────────────────────────────────────────
+# The Grafana Helm chart ships a full default values.yaml (1833 lines) that
+# contains every possible configuration key with its default value.
+# Source (authoritative): https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+#
+# This file is an OVERRIDE file — you only need to declare the keys you want
+# to change from the defaults. Helm deep-merges the two at deploy time:
+#
+#   Chart default values.yaml  (base — every key, mostly disabled/empty)
+#            +
+#   This values-prod.yaml      (overrides — only what we explicitly set)
+#            =
+#   Final rendered Kubernetes manifests
+#
+# Example: the chart default for persistence.enabled is `false` and size is
+# `10Gi`. By writing `enabled: true` and `size: 5Gi` below, only those two
+# keys are overridden — everything else in persistence: stays at the default.
+#
+# To find available keys: browse the default values.yaml linked above.
+# Every key documented there can be overridden here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Admin credentials ─────────────────────────────────────────────────────────
+# Option A (current): plaintext — fine for local dev, not for prod
+# adminUser: admin
+# adminPassword: "changeme"
+#
+# Option B (recommended for prod): reference a pre-existing Kubernetes Secret.
+# The chart injects the secret value as the GF_SECURITY_ADMIN_PASSWORD env var.
+#
+# Step 1 — store the password in AWS Secrets Manager:
+#   aws secretsmanager create-secret \
+#     --name prod/grafana/admin \
+#     --secret-string '{"username":"admin","password":"<strong-password>"}'
+#
+# Step 2 — create an ExternalSecret CR to sync it into a Kubernetes Secret:
+#   (place this in eks-private-cluster/k8s/gitops/argocd/values/grafana/external-secret.yaml)
+#
+#   apiVersion: external-secrets.io/v1beta1
+#   kind: ExternalSecret
+#   metadata:
+#     name: grafana-admin-secret
+#     namespace: monitoring
+#   spec:
+#     refreshInterval: 1h
+#     secretStoreRef:
+#       name: aws-secrets-manager      # your ClusterSecretStore name
+#       kind: ClusterSecretStore
+#     target:
+#       name: grafana-admin-secret     # Kubernetes Secret name created below
+#       creationPolicy: Owner
+#     data:
+#       - secretKey: admin-user        # key inside the K8s Secret
+#         remoteRef:
+#           key: prod/grafana/admin    # AWS Secrets Manager secret name
+#           property: username
+#       - secretKey: admin-password
+#         remoteRef:
+#           key: prod/grafana/admin
+#           property: password
+#
+# Step 3 — reference the Kubernetes Secret here (Option B below):
+# Option A (current): plaintext — fine for local dev, not for prod
+# adminUser: admin
+# adminPassword: "changeme"  # ← swap to Option B for prod
+
+# *Option B (uncomment when ExternalSecret is in place, remove the two lines above):
+admin:
+  existingSecret: grafana-credentials  # name of the K8s Secret created by ExternalSecret
+  userKey: admin_user        l          # key inside the Secret for the username
+  passwordKey: admin_password           # key inside the Secret for the password
+
+# ── Resource limits ───────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# ── Persistent storage ────────────────────────────────────────────────────────
+# Disabled: SQLite on disk replaced by external PostgreSQL (RDS).
+# All state (dashboards, users, alerting) is stored in the RDS instance.
+# See grafana.ini.database section below.
+persistence:
+  enabled: false
+
+# ── External PostgreSQL database (RDS) ───────────────────────────────────────
+# Grafana expands ${ENV_VAR} references inside grafana.ini at startup.
+# GF_DATABASE_PASSWORD is injected from a Kubernetes Secret (see `env` below).
+#
+# Pre-requisite — ExternalSecret to sync the RDS password from Secrets Manager:
+#
+#   apiVersion: external-secrets.io/v1beta1
+#   kind: ExternalSecret
+#   metadata:
+#     name: grafana-db-secret
+#     namespace: monitoring
+#   spec:
+#     refreshInterval: 1h
+#     secretStoreRef:
+#       name: aws-secrets-manager
+#       kind: ClusterSecretStore
+#     target:
+#       name: grafana-db-secret
+#       creationPolicy: Owner
+#     data:
+#       - secretKey: password
+#         remoteRef:
+#           key: <value of terraform output db_password_secret_arn>
+#           property: password   # adjust to the JSON key inside the secret
+#
+# Get the RDS hostname:  terraform -chdir=eks-private-cluster/terraform output db_host
+# What it does: At startup, Grafana reads this and opens a connection to your RDS instance 
+# instead of creating grafana.db (SQLite) on disk. From that point, every dashboard save, 
+# user login, alert rule, and API key is written to RDS instead of the local filesystem.
+grafana.ini:
+  database:
+    type: postgres
+    host: "${POSTGRES_HOST}:5432"   # replace with actual RDS hostname
+    name: "${GF_DATABASE_NAME}"
+    user: "${GF_DATABASE_USER}"
+    password: "${GF_DATABASE_PASSWORD}"
+    ssl_mode: require
+
+# ── Database password injected as env var ─────────────────────────────────────
+# Grafana resolves ${GF_DATABASE_PASSWORD} in grafana.ini at startup.
+# The value comes from the K8s Secret created by the ExternalSecret above.
+env:
+  GF_DATABASE_PASSWORD:
+    valueFrom:
+      secretKeyRef:
+        name: grafana-credentials
+        key: db_password
+  GF_DATABASE_NAME:
+    valueFrom:
+      secretKeyRef:
+        name: grafana-credentials
+        key: db_name
+  GF_DATABASE_USER:
+    valueFrom:
+      secretKeyRef:
+        name: grafana-credentials
+        key: db_user
+  POSTGRES_HOST:
+    valueFrom:
+      secretKeyRef:
+        name: grafana-credentials
+        key: db_host
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false  # ingress managed by Traefik IngressRoute
+
+# ── Datasources auto-provisioned on first boot ────────────────────────────────
+# All three backends run in the same `monitoring` namespace so short DNS names resolve.
+# Prometheus  → prometheus-operated:9090  (created by Prometheus Operator)
+# Loki        → loki:3100
+# Tempo       → tempo:3100
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # ── Prometheus (default metrics datasource) ────────────────────────────
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://prometheus-operated.monitoring.svc:9090
+        isDefault: true   # used as the default datasource in dashboards
+
+      # ── Tempo (distributed tracing) ───────────────────────────────────────
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc:3100
+        jsonData:
+          # Trace → Logs: click a span in Tempo → jump to Loki logs for that trace_id
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-1h"
+            spanEndTimeShift: "1h"
+            filterByTraceID: true
+            filterBySpanID: false
+            customQuery: true
+            query: '{job=~".+"} | json | trace_id=~"${__trace.traceId}"'
+          # Trace → Metrics: link from Tempo spans to Prometheus metric explorer
+          tracesToMetrics:
+            datasourceUid: prometheus
+          # Service graph: visualise request topology from span data
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          # Enable log search from within Tempo UI
+          lokiSearch:
+            datasourceUid: loki
+
+      # ── Loki (log aggregation) ────────────────────────────────────────────
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.monitoring.svc:3100
+        jsonData:
+          # Logs → Traces: if a log line contains trace_id, show a link to Tempo
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+              name: TraceID
+              url: "${__value.raw}"   # Grafana substitutes the captured trace_id

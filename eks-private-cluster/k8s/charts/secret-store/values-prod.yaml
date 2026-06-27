@@ -23,3 +23,8 @@ traefikMonitoringAuthExternalSecret:
   name: traefik-monitoring-auth-secret 
   enabled: true
   key: "prod/traefik-monitoring-auth-secret"  # AWS SM secret name 
+
+grafanaAdminExternalSecret:
+  name: grafana-credentials
+  enabled: true
+  key: "prod/grafana/admin"   # AWS SM secret name

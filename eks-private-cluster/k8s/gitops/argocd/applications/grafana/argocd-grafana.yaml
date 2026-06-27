@@ -1,21 +1,24 @@
-# ── ArgoCD Application: Prometheus ────────────────────────────────────────────
-# Apply this manifest with:  kubectl apply -f argocd-app-prometheus.yaml
+# ── ArgoCD Application: Grafana ───────────────────────────────────────────────
+# Apply this manifest with:  kubectl apply -f argocd-grafana.yaml
 #
 # ArgoCD will:
-#  1. Pull the upstream kube-prometheus-stack chart from the Helm registry
+#  1. Pull the official grafana/grafana Helm chart (standalone — no Prometheus bundled)
 #  2. Render it with values-prod.yaml from this Git repo
-#  3. Deploy only Prometheus + Operator into the monitoring namespace
-#     (Grafana, Alertmanager, node-exporter, kube-state-metrics are disabled
-#      in values-prod.yaml — each deployed separately or not needed yet)
-#  4. Watch for changes in Git and auto-sync forever
+#  3. Deploy Grafana into the monitoring namespace
+#  4. Auto-sync on every Git push
+#
+# Datasources (Prometheus, Loki, Tempo) are auto-provisioned via values-prod.yaml.
+# Deploy AFTER Prometheus, Loki, and Tempo (sync-wave 2).
 # ─────────────────────────────────────────────────────────────────────────────
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: prometheus
+  name: grafana
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"   # deploy after Prometheus/Loki/Tempo (wave 1)
   finalizers:
-    - resources-finalizer.argocd.argoproj.io/foreground  # cascade-delete all Prometheus resources when this Application is deleted
+    - resources-finalizer.argocd.argoproj.io/foreground  # cascade-delete all Grafana resources on app deletion
 spec:
   project: default
 
@@ -23,27 +26,27 @@ spec:
   # ArgoCD cannot fetch a Helm chart and a Git file in a single source — they
   # live in different locations (Helm registry vs. Git repo).
   #
-  # Source 1 pulls the kube-prometheus-stack chart package from the Helm registry.
+  # Source 1 pulls the Grafana chart package from the Helm registry.
   # Source 2 mounts this Git repo as a variable ($values) so Source 1 can
   # reference values-prod.yaml inside it via the valueFiles field.
   #
   # Alternative — inline values directly in Source 1 using `helm.values: |`:
   #   • No second source needed
   #   • But all config is embedded in this manifest, making it harder to read
-  #     and requiring edits here for every config change
+  #     and requiring edits here for every config change (password, datasource, etc.)
   #
   # The 2-source pattern keeps concerns separated:
-  #   • This file       → chart version + ArgoCD sync behaviour (changes rarely)
-  #   • values-prod.yaml → Prometheus config (changes often)
+  #   • This file  → chart version + ArgoCD sync behaviour (changes rarely)
+  #   • values-prod.yaml → Grafana config (changes often)
   # ─────────────────────────────────────────────────────────────────────────────
   sources:
-    # Source 1: upstream kube-prometheus-stack chart from Helm registry
-    - repoURL: https://prometheus-community.github.io/helm-charts
-      chart: kube-prometheus-stack
-      targetRevision: "87.2.0"  # pin chart version — upgrade by changing this value
+    # Source 1: official standalone Grafana chart from Helm registry
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: grafana
+      targetRevision: "12.7.0"  # pin chart version — upgrade by changing this value
       helm:
         valueFiles:
-          - $values/eks-private-cluster/k8s/gitops/argocd/values/prometheus/values-prod.yaml
+          - $values/eks-private-cluster/k8s/gitops/argocd/values/grafana/values-prod.yaml
           # $values is the alias created by Source 2 below — it resolves to the
           # root of this Git repo, so the path above points to our values file.
 
@@ -61,5 +64,13 @@ spec:
       prune: true      # delete resources removed from Git
       selfHeal: true   # revert manual kubectl changes back to Git state
     syncOptions:
-      - CreateNamespace=true  # auto-create monitoring namespace
-      - ServerSideApply=true  # required — kube-prometheus-stack has large CRDs that exceed kubectl apply limits
+      - CreateNamespace=true  # auto-create monitoring namespace if it doesn't exist
+      - ServerSideApply=true  # avoids annotation size limits on large ConfigMaps
+
+  ignoreDifferences:
+    # ArgoCD's internal schema does not declare .status.terminatingReplicas on Deployments
+    # causing structured merge diff to fail with ComparisonError — safe to ignore
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status/terminatingReplicas

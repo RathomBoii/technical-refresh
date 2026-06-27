@@ -24,7 +24,6 @@ spec:
           namespace: {{ .Values.app.namespace }}
           port: 8000
 
-
     {{- if .Values.userApp.enabled }}
     - match: "Host(`{{ .Values.domains.userApp }}`)"
       kind: Rule
@@ -33,6 +32,7 @@ spec:
           namespace: {{ .Values.userApp.namespace }}
           port: {{ default 3000 .Values.userApp.port }}
     {{- end }}
+
     {{- if .Values.prometheus.enabled }}
     - match: "Host(`{{ .Values.domains.prometheusApp }}`)"
       kind: Rule

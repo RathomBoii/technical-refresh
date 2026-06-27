@@ -406,3 +406,114 @@ Stage 3: Traces        — deploy Tempo, confirm the span tree, then correlation
 ```
 Metrics are pull-based and self-contained — master them first. Logs are just your
 `print()` output collected centrally. Traces are the most advanced — add last.
+
+---
+
+## Persistent Storage for Tempo/Loki (PVC modes + gotchas)
+
+Tempo and Loki are StatefulSets — they need disk. On EKS this means a
+PersistentVolumeClaim (PVC). This section is a reference for the storage
+concepts and the exact failure modes hit while deploying Tempo.
+
+### Two ways a PersistentVolume (PV) comes into existence
+
+| Mode | Who creates the PV? | When you use it |
+|---|---|---|
+| **Static provisioning** | You, by hand (write a PV YAML) | On-prem, pre-existing NFS/iSCSI |
+| **Dynamic provisioning** | A StorageClass + CSI driver, automatically | Cloud (EKS/GKE/AKS) — the normal way |
+
+**On EKS you almost never write a PV.** You use dynamic provisioning:
+
+```
+PVC  ──asks──▶  StorageClass (gp2)  ──tells──▶  EBS CSI Driver  ──creates──▶  PV (auto)
+"I need 5Gi"     "provisioner:                   "calls AWS                    real EBS
+                  ebs.csi.aws.com"                ec2:CreateVolume"            volume, wrapped
+                                                                               as a PV → Bound
+```
+
+The PVC is a **request**. The StorageClass is the **recipe**. The CSI driver is
+the **worker** that calls the cloud API. As long as the PVC names a working
+StorageClass, a PV appears on its own.
+
+### The mental model (analogy)
+
+| Object | Real job | Analogy |
+|---|---|---|
+| **PVC** | "I want 5Gi of storage" | Work order |
+| **StorageClass** | How to fulfil it (which provisioner) | Recipe / supplier contract |
+| **CSI Driver** | Calls AWS to make the disk | The delivery worker |
+| **PV** | The actual delivered disk | The package |
+
+### Tempo storage config (this repo)
+
+`k8s/values/tempo/values-prod.yaml`:
+```yaml
+persistence:
+  enabled: true
+  storageClassName: gp2   # ← REQUIRED on EKS — names the EBS CSI provisioner
+  size: 5Gi
+```
+
+For a quick learning deploy where you don't care about losing data on restart,
+use `emptyDir` instead by setting `enabled: false` (no PVC, no EBS volume).
+
+### Failure modes hit while deploying Tempo (and the fix)
+
+**1. PVC stuck `Pending`, pod won't schedule**
+```
+0/3 nodes are available: pod has unbound immediate PersistentVolumeClaims
+kubectl get pvc -n monitoring
+# storage-tempo-0   Pending   ...   STORAGECLASS: <unset>
+```
+- **Cause:** `persistence.enabled: true` but no `storageClassName`. The PVC asks
+  for the cluster's *default* StorageClass, but the cluster has none marked
+  default → nobody provisions it → `Pending` forever.
+- **Fix:** add `storageClassName: gp2` (requires the EBS CSI Driver addon active).
+
+**2. Can't fix it by editing — PVC `storageClassName` is immutable**
+- **Cause:** Kubernetes forbids changing `storageClassName` on an existing PVC.
+- **Fix:** `kubectl delete pvc storage-tempo-0 -n monitoring` and let it recreate.
+
+**3. ArgoCD sync fails: StatefulSet is immutable**
+```
+StatefulSet.apps "tempo" is invalid: spec: Forbidden: updates to statefulset
+spec for fields other than 'replicas', ... are forbidden
+```
+- **Cause:** a StatefulSet's `volumeClaimTemplates` is baked in at creation and
+  can never be patched. ArgoCD tried to patch in the new `gp2` template.
+- **Fix:** delete the whole StatefulSet so ArgoCD recreates it fresh:
+  ```bash
+  kubectl delete statefulset tempo -n monitoring
+  kubectl delete pvc storage-tempo-0 -n monitoring   # also delete the stuck PVC
+  argocd app sync tempo --force
+  ```
+
+### Immutability cheat-sheet (what you can/can't patch)
+
+| Resource | In-place patch allowed? | If wrong, you must… |
+|---|---|---|
+| Pod | No | Delete → controller recreates |
+| PVC `storageClassName` | No | Delete PVC → recreate |
+| StatefulSet `volumeClaimTemplates` | No | Delete StatefulSet → recreate |
+| Deployment spec | Yes (most fields) | Just patch / re-sync |
+
+### Verify storage is healthy
+
+```bash
+kubectl get pvc -n monitoring
+# storage-tempo-0   Bound   pvc-xxxx   5Gi   gp2     ✅
+
+kubectl get pv
+# pvc-xxxx   5Gi   ...   Bound   monitoring/storage-tempo-0   gp2   ← auto-created by CSI
+
+kubectl get pods -n monitoring | grep tempo
+# tempo-0   1/1   Running                                        ✅
+```
+
+### Takeaways
+
+1. **On cloud you never hand-write a PV** — a StorageClass + CSI driver makes it.
+2. **No `storageClassName` + no cluster default = PVC stuck `Pending`.**
+3. **PVCs and StatefulSet volume templates are immutable** — fix by delete +
+   recreate, never by patch.
+4. **EBS CSI Driver addon must be active** for `gp2`/`gp3` dynamic provisioning to work.

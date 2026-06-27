@@ -43,7 +43,7 @@ domains:
 
 
 app:
-  serviceName: app-svc
+  serviceName: app-service
   namespace: prod-app
 
 argocd:
@@ -53,8 +53,8 @@ argocd:
   enabled: true
 
 userApp:
-  serviceName: ""
-  namespace: userapp
+  serviceName: "user-service"
+  namespace: prod-app
   port: 3000
   enabled: false
 
