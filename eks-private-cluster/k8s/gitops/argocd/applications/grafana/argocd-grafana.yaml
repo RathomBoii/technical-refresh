@@ -43,7 +43,7 @@ spec:
     # Source 1: official standalone Grafana chart from Helm registry
     - repoURL: https://grafana.github.io/helm-charts
       chart: grafana
-      targetRevision: "12.7.0"  # pin chart version — upgrade by changing this value
+      targetRevision: "10.5.15"  # chart version (≠ app version) — Grafana app 12.3.1. Upgrade by changing this value
       helm:
         valueFiles:
           - $values/eks-private-cluster/k8s/gitops/argocd/values/grafana/values-prod.yaml

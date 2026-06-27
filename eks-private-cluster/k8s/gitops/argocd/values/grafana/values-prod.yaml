@@ -1,6 +1,6 @@
 # ── Grafana: standalone chart values (prod) ───────────────────────────────────
 # Used by: eks-private-cluster/k8s/gitops/argocd/applications/grafana/argocd-grafana.yaml
-# Chart:   grafana/grafana  v12.7.0
+# Chart:   grafana/grafana  chart 10.5.15  (Grafana app 12.3.1)
 #
 # ── How this file works ───────────────────────────────────────────────────────
 # The Grafana Helm chart ships a full default values.yaml (1833 lines) that
@@ -162,6 +162,45 @@ ingress:
 # Prometheus  → prometheus-operated:9090  (created by Prometheus Operator)
 # Loki        → loki:3100
 # Tempo       → tempo:3100
+#
+# ── All Services created by kube-prometheus-stack (kubectl get svc -n monitoring) ──
+#
+#  NAME                                      TYPE       PORT(S)               RESPONSIBILITY
+#  ─────────────────────────────────────────────────────────────────────────────────────────
+#  prometheus-operated                       Headless   9090, 10901           Operator-managed stable Service for Prometheus pods.
+#                                                                             Always named "prometheus-operated" regardless of Helm
+#                                                                             release name. Port 9090=HTTP metrics query,
+#                                                                             10901=Thanos gRPC (sidecar ↔ Thanos Query).
+#                                                                             USE THIS in Grafana datasource — name never changes.
+#
+#  prometheus-kube-prometheus-prometheus     ClusterIP  9090, 8080            User-facing Prometheus Service. Name is derived from
+#                                                                             Helm release name so it changes if you rename the release.
+#                                                                             Port 8080 = config-reloader metrics. Avoid using this
+#                                                                             in other services — prefer prometheus-operated above.
+#
+#  alertmanager-operated                     Headless   9093, 9094, 9094/UDP  Operator-managed stable Service for AlertManager pods.
+#                                                                             Same pattern as prometheus-operated — fixed name.
+#                                                                             Port 9093=HTTP API/UI, 9094=cluster mesh (HA gossip).
+#
+#  prometheus-kube-prometheus-alertmanager   ClusterIP  9093, 8080            User-facing AlertManager Service (release-name-derived).
+#                                                                             Port 9093=alerts/silences API, 8080=reloader metrics.
+#                                                                             Use this if routing alerts from external tools.
+#
+#  prometheus-kube-prometheus-operator       ClusterIP  443                   The Prometheus Operator itself. Exposes a webhook
+#                                                                             used by the Kubernetes API server to validate
+#                                                                             Prometheus/AlertManager/ServiceMonitor CRs on admission.
+#                                                                             Not a metrics endpoint — do not use in datasources.
+#
+#  prometheus-kube-state-metrics             ClusterIP  8080                  kube-state-metrics HTTP endpoint. Exports Kubernetes
+#                                                                             object state as metrics (pod phase, deployment replicas,
+#                                                                             node conditions, etc.). Scraped by Prometheus via a
+#                                                                             ServiceMonitor — not used directly in Grafana.
+#
+#  prometheus-prometheus-node-exporter       ClusterIP  9100                  Node exporter HTTP endpoint (one pod per worker node,
+#                                                                             exposed via this ClusterIP). Exports kernel-level host
+#                                                                             metrics (CPU, memory, disk, network). Scraped by
+#                                                                             Prometheus via a ServiceMonitor.
+# ─────────────────────────────────────────────────────────────────────────────────────────
 datasources:
   datasources.yaml:
     apiVersion: 1
