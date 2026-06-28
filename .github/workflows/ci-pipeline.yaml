@@ -40,11 +40,11 @@ jobs:
 
           # --- Uncomment below to scan a specific directory instead ---
           # semgrep --config=auto --severity=ERROR --json-output=semgrep-report.json \
-          #   eks-private-cluster/app/app || true
+          #   app/oil_price || true
 
           # --- Uncomment to scan multiple specific paths ---
           # semgrep --config=auto --severity=ERROR --json-output=semgrep-report.json \
-          #   eks-private-cluster/app/app \
+          #   app/oil_price \
           #   clean-architecture-app/src || true
 
       - name: Print Semgrep Summary
@@ -120,9 +120,9 @@ jobs:
       - name: Docker build
         run: |
           docker build \
-            -f eks-private-cluster/app/app/Dockerfile \
+            -f app/oil_price/Dockerfile \
             -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
-            eks-private-cluster/app/app
+            app/oil_price
 
       - name: Trivy image scan (report only — does not block pipeline)
         id: trivy
